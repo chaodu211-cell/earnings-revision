@@ -3,7 +3,7 @@
 """
 生成 修正速度与纳指.html：
   上半：纳指（综合 / 纳斯达克100）+ 超额修正（速度）+ 超额修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
-        纳指底色 = 去噪后的四个阶段，标出实时拐点。
+        纳指上标出速度见顶的红蓝三角（点击看详情）。
   下半：速度拐点 × 纳指（speed.py）：四阶段之后的纳指表现、拐点前后平均走势、事件清单；窗口 N × 去噪阈值 h 共 12 组全部内嵌，页面上切换。
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
 
@@ -229,7 +229,7 @@ tr.cur td { font-weight: 600; }
 <body>
 <div class="wrap">
   <h1>修正速度与纳指</h1>
-  <p class="sub">上：纳指（底色 = 修正所处阶段）；中：标普500 远期 EPS 的超额修正（一阶，速度）；下：超额修正的 N 周变化（二阶导，加速度）。拖动或滚轮缩放，三图联动。</p>
+  <p class="sub">上：纳指；中：标普500 远期 EPS 的超额修正（一阶，速度）；下：超额修正的 N 周变化（二阶导，加速度）。拖动或滚轮缩放，三图联动。</p>
 
   <p class="fresh" id="fresh"></p>
   <div class="tiles" id="tiles"></div>
@@ -260,11 +260,6 @@ tr.cur td { font-weight: 600; }
     </span>
   </div>
   <div class="bar">
-    <span class="grp">纳指底色
-      <span class="seg" id="band">
-        <button data-v="phase" aria-pressed="true">四阶段</button><button data-v="acc" aria-pressed="false">加速期</button><button data-v="x13" aria-pressed="false">上修期</button><button data-v="none" aria-pressed="false">无</button>
-      </span>
-    </span>
     <span class="grp">速度见顶标记
       <span class="seg" id="marks">
         <button data-v="swing" aria-pressed="true">大波段</button><button data-v="zero" aria-pressed="false">零点</button><button data-v="conf" aria-pressed="false">确认点</button><button data-v="ex" aria-pressed="false">事后真实点</button><button data-v="none" aria-pressed="false">无</button>
@@ -333,7 +328,7 @@ const $ = s => document.querySelector(s);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (v, d = 1) => v == null ? "—" : (v > 0 ? "+" : "") + Number(v).toFixed(d) + "%";
 const day = t => new Date(t).toISOString().slice(0, 10);
-const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, band: "phase", marks: "swing", evmode: "sw", each: true, ticks: [] };
+const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, marks: "swing", evmode: "sw", each: true, ticks: [] };
 const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
 // weekly 行里的列：清洗口径 x13 在 1、二阶导在 4/5/6；实时口径 x13 在 7、二阶导在 8/9/10；待核实提示在 11
 const COL = { clean: { x: 1, a: { 4: 4, 8: 5, 13: 6 } }, rt: { x: 7, a: { 4: 8, 8: 9, 13: 10 } } }, FLAG = 11;
@@ -374,9 +369,6 @@ function tiles() {
 function legend() {
   const sw = c => `<i style="background:${css(c)}"></i>`;
   let h = "";
-  if (state.band === "phase") h += ["A", "B", "C", "D"].map(c => `<span>${sw("--p" + c)}${PH[c]}</span>`).join("");
-  else if (state.band === "acc") h += `<span>${sw("--band")}二阶导去噪后为正（加快）</span>`;
-  else if (state.band === "x13") h += `<span>${sw("--band")}超额修正为正（上修期）</span>`;
   if (state.marks !== "none") { const [a, b] = MARK_TXT[state.marks];
     h += `<span><b class="mk" style="color:${css("--pos")}">▼</b>${a}</span><span><b class="mk" style="color:${css("--neg")}">▲</b>${b}</span>`; }
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算；底色仍按阈值 ${state.h}）</span>`;
@@ -417,32 +409,6 @@ function swingNote() {
   el.textContent = "大波段进度（" + (state.src === "rt" ? "实时口径" : "清洗口径") + "）：" + lead + rest;
 }
 
-// 阶段串 → 连续区段
-function phaseRuns(test) {
-  const ph = S().phase, out = [];
-  let st = null, code = null;
-  for (let i = 0; i <= WK.length; i++) {
-    const c = i < WK.length ? test(ph[i]) : null;
-    if (c !== code) {
-      if (code) out.push([st, i < WK.length ? WK[i][0] : WK[WK.length - 1][0] + 7 * 864e5, code]);
-      st = i < WK.length ? WK[i][0] : null; code = c;
-    }
-  }
-  return out;
-}
-function bandData() {
-  if (state.band === "none") return [];
-  let runs;
-  if (state.band === "phase") runs = phaseRuns(c => (c && c !== "-") ? c : null).map(r => [r[0], r[1], css("--p" + r[2])]);
-  else if (state.band === "acc") runs = phaseRuns(c => (c === "A" || c === "D") ? "y" : null).map(r => [r[0], r[1], css("--band")]);
-  else runs = WK.reduce((acc, r, i) => {
-      const on = r[XI()] > 0, last = acc[acc.length - 1];
-      if (on && (!last || last.closed)) acc.push({ s: r[0], e: r[0] + 7 * 864e5 });
-      else if (on) last.e = r[0] + 7 * 864e5;
-      else if (last) last.closed = true;
-      return acc; }, []).map(b => [b.s, b.e, css("--band")]);
-  return runs.map(([a, b, c]) => [{ xAxis: a, itemStyle: { color: c } }, { xAxis: b }]);
-}
 // 只标「速度见顶」——按修正的猛烈程度理解：
 //   上修速度见顶 = 超额修正为正、二阶导由正转负（上修最快的时候过去了）→ 蓝色 ▼，标在价格上方
 //   下修速度见顶 = 超额修正为负、二阶导由负转正（下修最猛的时候过去了，即超额修正的谷底）→ 橙色 ▲，标在价格下方
@@ -598,8 +564,7 @@ function option() {
     ],
     series: [
       { name, type: "line", xAxisIndex: 0, yAxisIndex: 0, data: PX[state.idx], showSymbol: false,
-        lineStyle: { width: 1.6, color: css("--price") }, itemStyle: { color: css("--price") },
-        markArea: { silent: true, data: bandData() } },
+        lineStyle: { width: 1.6, color: css("--price") }, itemStyle: { color: css("--price") } },
       mark(mUp, true, pos),
       mark(mDn, false, neg),
       { type: "scatter", xAxisIndex: 1, yAxisIndex: 1, data: sTop, symbol: "circle", symbolSize: 8, z: 5, tooltip: { show: false },
@@ -797,7 +762,6 @@ seg("#src", v => { state.src = v; render(); });
 seg("#scale", v => { state.scale = v; render(); });
 seg("#win", v => { state.win = +v; render(); });
 seg("#hys", v => { state.h = +v; render(); });
-seg("#band", v => { state.band = v; render(); });
 seg("#range", v => setRange(v));
 seg("#evmode", v => { state.evmode = v; evRender(); });
 seg("#marks", v => { state.marks = v; render(); });
