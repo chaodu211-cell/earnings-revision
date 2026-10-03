@@ -277,6 +277,7 @@ tr.cur td { font-weight: 600; }
   </div>
   <div class="legend" id="legend"></div>
   <p class="fresh" id="swingnote" style="margin:6px 0 0"></p>
+  <div class="note" id="markinfo" style="display:none"></div>
 
   <div id="chart"></div>
 
@@ -380,6 +381,7 @@ function legend() {
     h += `<span><b class="mk" style="color:${css("--pos")}">▼</b>${a}</span><span><b class="mk" style="color:${css("--neg")}">▲</b>${b}</span>`; }
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算；底色仍按阈值 ${state.h}）</span>`;
   if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底</span>`;
+  if (state.marks !== "none") h += `<span class="muted">点三角看确认日期和实际见顶 / 见底日期</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
   swingNote();
@@ -527,16 +529,8 @@ function option() {
   const pos = css("--pos"), neg = css("--neg");
   const name = NAME[state.idx];
   const M = markSets();
-  const mUp = M ? M.up.map(p => [p.t, p.px, p.date]) : [], mDn = M ? M.dn.map(p => [p.t, p.px, p.date]) : [];
-  // 详情框：这一周如果有红蓝三角，写明是什么信号
-  const MK = new Map();
-  if (M) {
-    const [tu, td] = MARK_TXT[state.marks];
-    const add = (p, sym, color, title) => MK.set(p.t, `<br><span style="color:${color}">${sym}</span> <b>${title}</b>`
-      + (p.piv ? `<br><span style="color:${ink2}">　${sym === "▼" ? "顶" : "底"}在 ${p.piv}（${fmt(p.pv, 2)}），此前${sym === "▼" ? "涨" : "跌"} ${p.amp.toFixed(1)} 个百分点，晚 ${p.lag} 周确认</span>` : ""));
-    M.up.forEach(p => add(p, "▼", pos, tu.replace(/（.*）$/, "")));
-    M.dn.forEach(p => add(p, "▲", neg, td.replace(/（.*）$/, "")));
-  }
+  LASTM = M;
+  const mUp = M ? M.up.map((p, i) => [p.t, p.px, i]) : [], mDn = M ? M.dn.map((p, i) => [p.t, p.px, i]) : [];
   // 事后高 / 低点同时标在「速度」那张图上，能直接看到是超额修正的峰 / 谷
   const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
@@ -553,8 +547,9 @@ function option() {
   const cap = Math.ceil(av[Math.floor(av.length * 0.95)] / 2) * 2;
   const line = (y, dash) => ({ yAxis: y, lineStyle: { color: ink3, width: 1, type: dash ? "dashed" : "solid" } });
   const label = (text, top) => ({ text, left: 64, top, textStyle: { color: ink2, fontSize: 12, fontWeight: 500 } });
-  const mark = (data, down, color) => ({ type: "scatter", xAxisIndex: 0, yAxisIndex: 0, data, symbol: "triangle", symbolRotate: down ? 180 : 0,
-    symbolSize: 10, symbolOffset: [0, down ? -10 : 10], z: 5, tooltip: { show: false },
+  const mark = (data, down, color) => ({ name: down ? "mark-up" : "mark-dn", type: "scatter", xAxisIndex: 0, yAxisIndex: 0, data,
+    symbol: "triangle", symbolRotate: down ? 180 : 0, symbolSize: 12, symbolOffset: [0, down ? -11 : 11], z: 5, tooltip: { show: false },
+    cursor: "pointer", emphasis: { scale: 1.5 },
     itemStyle: { color, borderColor: css("--surface"), borderWidth: 1 } });
   return {
     animation: false,
@@ -569,7 +564,6 @@ function option() {
       formatter: ps => {
         const t = ps[0].axisValue, iw = before(WK, t), px = pxAt(t);
         let h = `<b>${day(t)}</b><br>${name}：${px != null ? px.toLocaleString() : "—"}`;
-        if (iw >= 0 && MK.has(WK[iw][0])) h += MK.get(WK[iw][0]);
         if (iw >= 0) {
           const w = WK[iw], x = w[XI()], a = w[AC()], ph = PH[S().phase[iw]];
           const dot = v => `<span style="color:${v > 0 ? pos : neg}">●</span>`;
@@ -773,6 +767,7 @@ function updateTicks() {
 
 let quiet = false;  // 程序触发的缩放不清掉区间按钮的高亮
 function render(keepZoom = true) {
+  const mi = document.getElementById("markinfo"); if (mi) mi.style.display = "none";
   const z = keepZoom ? chart.getOption()?.dataZoom?.[0] : null;
   chart.setOption(option(), true);
   if (z) { quiet = true; chart.dispatchAction({ type: "dataZoom", start: z.start, end: z.end }); quiet = false; }
@@ -807,6 +802,46 @@ seg("#range", v => setRange(v));
 seg("#evmode", v => { state.evmode = v; evRender(); });
 seg("#marks", v => { state.marks = v; render(); });
 $("#each").addEventListener("change", e => { state.each = e.target.checked; evRender(); });
+// 点击红蓝三角 → 详情框：信号、确认日期、实际见顶 / 见底日期、之后纳指
+let LASTM = null;
+function showMark(kind, i) {
+  const M = LASTM, el = $("#markinfo");
+  if (!M) return;
+  const up = kind === "mark-up", p = (up ? M.up : M.dn)[i];
+  if (!p) return;
+  const ink3 = css("--ink-3"), color = css(up ? "--pos" : "--neg"), sym = up ? "▼" : "▲";
+  const name = { swing: up ? "上修速度见顶确认（大波段）" : "下修速度见顶确认（大波段）",
+                 zero: up ? "上修速度见顶（二阶导零点）" : "下修速度见顶（二阶导零点）",
+                 conf: up ? "上修速度见顶确认（二阶导跌破 −阈值）" : "下修速度见顶确认（二阶导升破 +阈值）",
+                 ex: up ? "上修速度真实高点（事后）" : "下修速度真实低点（事后）" }[state.marks];
+  const wk = n => Math.round(n / (7 * 864e5)), word = up ? "见顶" : "见底";
+  let lines = [];
+  if (state.marks === "ex") {
+    lines.push(`实际${word}日期：<b>${p.date}</b>（超额修正 ${fmt(p.x13, 2)}）。这是事后才能确认的真实${up ? "高点" : "低点"}，当时并不知道。`);
+  } else {
+    lines.push(`确认日期：<b>${p.date}</b>（这一周周五的周报；当时超额修正 ${fmt(p.x13, 2)}）`);
+    if (p.piv) {
+      lines.push(`实际${word}日期：<b>${p.piv}</b>（超额修正 ${fmt(p.pv, 2)}）——确认晚了 ${p.lag} 周；此前${up ? "涨" : "跌"}了 ${p.amp.toFixed(1)} 个百分点`);
+    } else {
+      // 零点 / 确认点没有自带顶底：取确认日之前 26 周内最近的事后真实点
+      const L = S().ex[up ? "修正速度高点" : "修正速度低点"].events.filter(e => e.date <= p.date && tsOf(p.date) - tsOf(e.date) <= 26 * 7 * 864e5);
+      const e = L[L.length - 1];
+      lines.push(e ? `实际${word}日期（事后看，确认日之前最近的真实${up ? "高点" : "低点"}）：<b>${e.date}</b>（超额修正 ${fmt(e.x13, 2)}）——确认晚了 ${wk(tsOf(p.date) - tsOf(e.date))} 周`
+                   : `确认日之前 26 周内没有事后真实${up ? "高点" : "低点"}（多半是小周期的翻转）`);
+    }
+  }
+  // 之后纳指（以确认周周五收盘为基准）
+  const P = PX[state.idx], at = t => { const j = before(P, t); return j >= 0 ? P[j][1] : null; };
+  const t0 = tsOf(p.date), p0 = at(t0), last = P[P.length - 1][0];
+  const r = k => { const t1 = t0 + k * 7 * 864e5; if (t1 > last) return "—"; const v = at(t1); return v && p0 ? fmt(100 * (v / p0 - 1)) : "—"; };
+  lines.push(`${NAME[state.idx]}：当周收盘 ${p0 ? p0.toLocaleString() : "—"}；之后 4 / 13 / 26 周 ${r(4)} / ${r(13)} / ${r(26)}`);
+  el.innerHTML = `<p style="margin:0 0 4px"><b style="color:${color}">${sym} ${name}</b>`
+    + `<span style="float:right;cursor:pointer;color:${ink3}" onclick="this.parentNode.parentNode.style.display='none'">✕ 关闭</span></p>`
+    + lines.map(x => `<p>${x}</p>`).join("");
+  el.style.display = "";
+}
+chart.on("click", p => { if (p.seriesName === "mark-up" || p.seriesName === "mark-dn") showMark(p.seriesName, p.data[2]); });
+
 chart.on("datazoom", () => {
   updateTicks();
   if (!quiet) $("#range").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));

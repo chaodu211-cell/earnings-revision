@@ -179,10 +179,13 @@ def run(n=8, h=1.0, verbose=True, src="clean"):
         res["realtime"][typ] = {"events": rows, "summary": summarize(rows), "path": path(w, ds)}
 
     # 事后高低点本来就是事后看的，一律用清洗口径（数据最干净）
-    pk, tr = expost_turns(w if src == "clean" else load(n, h, "clean")[0])
+    # 事后高低点本来就是事后看的，一律用清洗口径（数据最干净）；事件行里的超额修正、二阶导也取清洗口径——
+    # 实时口径在待核实周是空值（如 2026-06-12），会显示成 NaN、被当成「不是正值」漏掉
+    wx = w if src == "clean" else load(n, h, "clean")[0]
+    pk, tr = expost_turns(wx)
     ex = {}
     for kind, ds, name in (("peak", pk, "修正速度高点"), ("trough", tr, "修正速度低点")):
-        rows = event_rows(w, ds)
+        rows = event_rows(wx, ds)
         for r, d in zip(rows, ds):
             r["nq_lag_weeks"], r["nq_extreme"] = nasdaq_extreme_lag(w, d, kind)
             # 实时信号晚多少周：事后拐点之后第一个对应的实时事件
