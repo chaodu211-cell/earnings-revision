@@ -267,7 +267,7 @@ tr.cur td { font-weight: 600; }
     </span>
     <span class="grp">速度见顶标记
       <span class="seg" id="marks">
-        <button data-v="zero" aria-pressed="false">零点</button><button data-v="conf" aria-pressed="true">确认点</button><button data-v="ex" aria-pressed="false">事后真实点</button><button data-v="none" aria-pressed="false">无</button>
+        <button data-v="swing" aria-pressed="true">大波段</button><button data-v="zero" aria-pressed="false">零点</button><button data-v="conf" aria-pressed="false">确认点</button><button data-v="ex" aria-pressed="false">事后真实点</button><button data-v="none" aria-pressed="false">无</button>
       </span>
     </span>
     <span class="seg" id="range">
@@ -290,7 +290,7 @@ tr.cur td { font-weight: 600; }
   <h3>拐点前后纳指的平均走势（事件周 = 0）</h3>
   <div class="bar">
     <span class="seg" id="evmode">
-      <button data-v="rt" aria-pressed="true">实时拐点（当时可知，按上面的阈值）</button><button data-v="ex" aria-pressed="false">事后拐点（速度真正的高低点）</button>
+      <button data-v="sw" aria-pressed="true">大波段确认</button><button data-v="rt" aria-pressed="false">实时拐点（按上面的阈值）</button><button data-v="ex" aria-pressed="false">事后拐点（速度真正的高低点）</button>
     </span>
     <label class="chk"><input type="checkbox" id="each" checked> 显示每个事件</label>
   </div>
@@ -306,6 +306,11 @@ tr.cur td { font-weight: 600; }
        那周不更新信号；下一个有数据的周离原值更近判笔误作废，离可疑值更近判真实变动并补认（晚一周）；周报没给远期市盈率的周同样不更新。
        2011 年以来共拦下 20 周：5 次笔误（2011 年 3 次、2021-06-17、2022-06-17）全部作废，15 次真实大幅变动（2018 年减税、2020 年疫情、2026 年强势上修等）晚一周补认。
        <b>清洗</b> = 研究用：笔误按前后各 2 期中位数剔除、缺周线性插值，用到了之后的数据，历史标记比当时看到的略干净。</p>
+    <p><b>大波段（默认的标记和事件）</b>：只标快速抬升 / 快速下跌之后的速度拐点。超额修正从最近一个低点涨了 ≥ 4 个百分点、顶部 ≥ +2%，
+       之后从顶部回落满 2 个百分点 → 确认「上修速度见顶」（蓝 ▼）；跌了 ≥ 4 个百分点、谷底 ≤ −2%，之后反弹满 2 个百分点 → 确认「下修速度见顶」（橙 ▲，下修最猛的时候过去了）。
+       2 取的是略高于单周噪声的 95% 分位（1.5），4 约等于超额修正一个标准差（4.4），按噪声定、没按收益挑。确认时就知道这一段真正的顶 / 底在哪周（中图圆圈）。
+       2013 年以来上修 / 下修各 5 次（原来按二阶导确认是 12 / 8 次），确认滞后中位数 7 周。代价：高位平台上的第二个驼峰不算「快速抬升」，
+       比如 2021-07-23（9.56%，距前一个低点只涨了 3.9 个百分点）不会标。</p>
     <p><b>三种「拐点」</b>（以 2026 年这次上修见顶为例）：
        ① 速度真实高点 = 超额修正真正的峰值，严格意义上二阶导 = 0 的点（2026-06-12，9.33%）；要等之后几周回落才能确认，事后才知道。
        ② 二阶导零点 = 页面上的二阶导由正转负（2026-07-03）。二阶导用的是「本周 − N 周前」，要等当前值跌回 N 周前的水平才到 0，
@@ -326,7 +331,7 @@ const $ = s => document.querySelector(s);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (v, d = 1) => v == null ? "—" : (v > 0 ? "+" : "") + Number(v).toFixed(d) + "%";
 const day = t => new Date(t).toISOString().slice(0, 10);
-const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, band: "phase", marks: "conf", evmode: "rt", each: true, ticks: [] };
+const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, band: "phase", marks: "swing", evmode: "sw", each: true, ticks: [] };
 const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
 // weekly 行里的列：清洗口径 x13 在 1、二阶导在 4/5/6；实时口径 x13 在 7、二阶导在 8/9/10；待核实提示在 11
 const COL = { clean: { x: 1, a: { 4: 4, 8: 5, 13: 6 } }, rt: { x: 7, a: { 4: 8, 8: 9, 13: 10 } } }, FLAG = 11;
@@ -373,6 +378,8 @@ function legend() {
   if (state.marks !== "none") { const [a, b] = MARK_TXT[state.marks];
     h += `<span><b class="mk" style="color:${css("--pos")}">▼</b>${a}</span><span><b class="mk" style="color:${css("--neg")}">▲</b>${b}</span>`; }
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算；底色仍按阈值 ${state.h}）</span>`;
+  if (state.marks === "swing") { const Z = swings();
+    h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；当前处在${Z.mode === "down" ? "回落段" : "上升段"}，段内${Z.mode === "down" ? "最低" : "最高"} ${Z.ext.v.toFixed(2)}%（${day(Z.ext.t)}）</span>`; }
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
 }
@@ -409,10 +416,47 @@ function bandData() {
 // 不标「速度见底」：上修中重新加快、下修中重新加剧。
 // 三种口径：零点 = 二阶导穿过 0（不去噪）；确认点 = 去噪后状态翻转；事后 = 超额修正真正的局部高点（正）/ 低点（负）
 // 图上每一次都标出来；下方事件研究另按「同类至少隔 13 周」去重
+// 大波段（折返）：超额修正从最近一个低点涨了 ≥ A、且顶部 ≥ +L% 之后，从顶部回落满 R → 确认「上修速度见顶」；
+// 跌了 ≥ A、且谷底 ≤ −L% 之后，从谷底反弹满 R → 确认「下修速度见顶」（下修最猛的时候过去了）。
+// R 取 2：略高于单周噪声的 95% 分位（1.5 个百分点）；A 取 4：约一个标准差（4.4）。按噪声定，不按收益挑。
+// 只用当时已有的读数（待核实 / 缺周跳过）；确认那周就知道顶 / 底在哪周（回落前的极值）。
+const SW = { R: 2, A: 4, L: 2 };
+function swings() {
+  const col = XI(), out = [];
+  let mode = null, ext = null, last = null, hi = null, lo = null;
+  for (let i = 0; i < WK.length; i++) {
+    const v = WK[i][col], t = WK[i][0];
+    if (v == null) continue;
+    const cur = { t, v };
+    if (mode === null) {
+      if (!hi || v > hi.v) hi = cur;
+      if (!lo || v < lo.v) lo = cur;
+      if (v <= hi.v - SW.R) { out.push({ type: "top", p: hi, c: cur, amp: NaN }); last = hi.v; mode = "down"; ext = cur; }
+      else if (v >= lo.v + SW.R) { out.push({ type: "bot", p: lo, c: cur, amp: NaN }); last = lo.v; mode = "up"; ext = cur; }
+      continue;
+    }
+    if (mode === "up") {
+      if (v > ext.v) ext = cur;
+      else if (v <= ext.v - SW.R) { out.push({ type: "top", p: ext, c: cur, amp: ext.v - last }); last = ext.v; mode = "down"; ext = cur; }
+    } else {
+      if (v < ext.v) ext = cur;
+      else if (v >= ext.v + SW.R) { out.push({ type: "bot", p: ext, c: cur, amp: last - ext.v }); last = ext.v; mode = "up"; ext = cur; }
+    }
+  }
+  return { tops: out.filter(e => e.type === "top" && e.p.v >= SW.L && e.amp >= SW.A),
+           bots: out.filter(e => e.type === "bot" && e.p.v <= -SW.L && e.amp >= SW.A), mode, ext };
+}
+
 function markSets() {
   if (state.marks === "none") return null;
   const pt = (t, x13) => ({ t, px: pxAt(t), x13, date: day(t) });
   let up = [], dn = [];
+  if (state.marks === "swing") {
+    const Z = swings();
+    return { up: Z.tops.map(e => pt(e.c.t, e.c.v)).filter(p => p.px != null),
+             dn: Z.bots.map(e => pt(e.c.t, e.c.v)).filter(p => p.px != null),
+             piv: [...Z.tops, ...Z.bots].map(e => [e.p.t, e.p.v]) };
+  }
   if (state.marks === "ex") {
     up = S().ex["修正速度高点"].events.filter(e => e.x13 > 0).map(e => pt(tsOf(e.date), e.x13));
     dn = S().ex["修正速度低点"].events.filter(e => e.x13 < 0).map(e => pt(tsOf(e.date), e.x13));
@@ -431,6 +475,7 @@ function markSets() {
   return { up: up.filter(p => p.px != null), dn: dn.filter(p => p.px != null) };
 }
 const MARK_TXT = {
+  swing: ["上修速度见顶确认（大波段：涨 ≥ 4 个百分点、顶 ≥ +2% 后回落 2 个百分点）", "下修速度见顶确认（大波段：跌 ≥ 4 个百分点、底 ≤ −2% 后反弹 2 个百分点）"],
   zero: ["上修速度见顶（超额修正 > 0，二阶导由正转负）", "下修速度见顶（超额修正 < 0，二阶导由负转正）"],
   conf: ["上修速度见顶确认（超额修正 > 0，二阶导跌破 −阈值）", "下修速度见顶确认（超额修正 < 0，二阶导升破 +阈值）"],
   ex: ["上修速度真实高点（超额修正峰值，事后）", "下修速度真实高点（超额修正谷底，事后）"],
@@ -450,7 +495,7 @@ function option() {
   const M = markSets();
   const mUp = M ? M.up.map(p => [p.t, p.px, p.date]) : [], mDn = M ? M.dn.map(p => [p.t, p.px, p.date]) : [];
   // 事后高 / 低点同时标在「速度」那张图上，能直接看到是超额修正的峰 / 谷
-  const sTop = M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
+  const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
     axisLabel: { color: ink2, fontSize: 11 }, splitLine: { lineStyle: { color: border } } };
   const G = [{ top: 26, height: "40%" }, { top: "52%", height: "16%" }, { top: "75%", height: "16%" }]
@@ -588,10 +633,31 @@ function peakText() {
     + (low ? `但低位峰值之后也有过 ${low.m.dd.toFixed(1)}%（${low.e.date}），峰值高低本身不是可靠的预警，只能当背景。` : "");
 }
 
+// 大波段事件：在页面里按纳斯达克综合现算前后走势（确认周的周报周五发布 → 下一个交易日为第 0 周）
+function swEvents() {
+  const Z = swings(), last = NQ[NQ.length - 1][0];
+  const at = t => { const i = before(NQ, t); return i >= 0 ? NQ[i][1] : null; };
+  const one = e => {
+    const t0 = e.c.t + 864e5, p0 = at(t0);
+    const r = k => { const t1 = t0 + k * 7 * 864e5; if (t1 > last + 864e5) return null; const p = at(t1); return p0 && p ? 100 * (p / p0 - 1) : null; };
+    const pb = at(t0 - 13 * 7 * 864e5);
+    return { date: day(e.c.t), piv: day(e.p.t), pv: e.p.v, amp: e.amp, lag: Math.round((e.c.t - e.p.t) / (7 * 864e5)),
+             prior13: p0 && pb ? 100 * (p0 / pb - 1) : null, f4: r(4), f13: r(13), f26: r(26),
+             path: Array.from({ length: 53 }, (_, i) => r(i - 26)) };
+  };
+  const grp = L => { const ev = L.map(one);
+    return { events: ev, each: ev.map(e => e.path),
+             mean: Array.from({ length: 53 }, (_, k) => { const v = ev.map(e => e.path[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b) / v.length : null; }) }; };
+  return { up: grp(Z.tops), dn: grp(Z.bots) };
+}
+
 function evRender() {
   const s = S(), ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), pos = css("--pos"), neg = css("--neg");
-  const types = state.evmode === "rt" ? [["下修见底", s.rt["下修见底"], pos], ["上修见顶", s.rt["上修见顶"], neg]]
-                                      : [["修正速度低点", s.ex["修正速度低点"], pos], ["修正速度高点", s.ex["修正速度高点"], neg]];
+  const sw = state.evmode === "sw" ? swEvents() : null;
+  // 颜色和图上的标记一致：上修那一类蓝、下修那一类橙
+  const types = sw ? [["上修速度见顶", sw.up, pos], ["下修速度见顶", sw.dn, neg]]
+              : state.evmode === "rt" ? [["上修见顶", s.rt["上修见顶"], pos], ["下修见底", s.rt["下修见底"], neg]]
+              : [["修正速度高点", s.ex["修正速度高点"], pos], ["修正速度低点", s.ex["修正速度低点"], neg]];
   const ks = Array.from({ length: 53 }, (_, i) => String(i - 26));
   const series = [];
   for (const [name, g, color] of types) {
@@ -614,6 +680,17 @@ function evRender() {
   }, true);
 
   // 事件表
+  if (sw) {
+    let h = `<tr><th>确认周</th><th>类型</th><th>真正的顶 / 底</th><th>此前涨 / 跌</th><th>确认晚</th><th>纳指之前 13 周</th><th>之后 4 周</th><th>之后 13 周</th><th>之后 26 周</th></tr>`;
+    const rows = [];
+    for (const [name, g, color] of types) for (const e of g.events) rows.push([e, name, color]);
+    rows.sort((a, b) => a[0].date < b[0].date ? 1 : -1);
+    for (const [e, name, color] of rows)
+      h += `<tr><td>${e.date}</td><td><span class="sw" style="background:${color}"></span>${name}</td><td>${e.piv}（${fmt(e.pv, 2)}）</td>
+        <td>${e.amp.toFixed(1)} 个百分点</td><td>${e.lag} 周</td><td>${fmt(e.prior13)}</td><td>${fmt(e.f4)}</td><td>${fmt(e.f13)}</td><td>${fmt(e.f26)}</td></tr>`;
+    $("#evtbl").innerHTML = h;
+    return;
+  }
   const ex = state.evmode === "ex";
   let h = `<tr><th>日期</th><th>类型</th><th>超额修正</th><th>二阶导</th><th>纳指之前 13 周</th><th>之后 4 周</th><th>之后 13 周</th><th>之后 26 周</th>${ex ? "<th>纳指极值相差</th><th>实时确认晚</th>" : ""}</tr>`;
   const rows = [];
