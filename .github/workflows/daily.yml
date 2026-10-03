@@ -1,0 +1,222 @@
+name: daily
+
+# 盈利修正 · 修正速度与纳指：每个美股交易日自动重算，发布到 GitHub Pages。
+#
+# 分工：GitHub 负责算，Claude 负责推送。
+#   · 本工作流：北京时间 19:23 左右（周一至周五）抓新周报和纳指 → 重算 → 页面发布到
+#     https://chaodu211-cell.github.io/earnings-revision/ ，同目录另有 status.json（各数据截至日、抓取是否成功）。
+#   · Claude 的定时任务：北京时间 20:50 读取上面那个页面，更新 Artifact，推送到手机。
+#
+# txt/（FactSet 周报原文，版权内容）不进 git，仓库里只有本地全量解析出来的 factset_weekly.csv。
+# 这里每次只抓 CSV 最新一期之后的周报（fetch_factset.py --since-csv），追加解析（parse_factset.py --incremental），
+# 新抓的 txt/ 用 actions/cache 在两次运行之间保存。本地推上来更新过的 factset_weekly.csv 之后，这里自然从那一期往后接。
+# 算出来的页面和中间文件只发布、不提交；提交回 main 的只有 Yahoo 成分股快照（只由这里写，每个交易日一份）。
+on:
+  schedule:
+    # 11:23 UTC = 北京 19:23 = 美东 07:23（夏令时）/ 06:23（冬令时）：前一交易日收盘已齐，
+    # 离 Claude 20:50 读取约一个半小时（GitHub 定时任务常晚 10~60 分钟）。分钟错开整点，也错开最优拟合的 11:07。
+    # FactSet 周报美东周五白天才发，所以周五那期在下周一这次进页面。
+    - cron: "23 11 * * 1-5"
+  # 代码合进 main 就重建页面（只改文档不触发）；这种运行不拍 Yahoo 快照
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 只用来提交 Yahoo 快照：yahoo/、yahoo_agg.csv、yahoo_sector.csv
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TZ: Asia/Shanghai       # 页面「生成时间」、快照日期和本地 Mac 一样按北京时间
+      EI_PROXY: ""            # FactSet 直连（本地才走 Veee）
+      REV_FORCE_FETCH: "1"    # 标普、纳指每次重下，下载失败才退回缓存
+      PYTHONWARNINGS: ignore
+    outputs:
+      built: ${{ steps.site.outputs.built }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 不开 cache: pip —— 仓库没有 requirements.txt，开了会直接报错
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 装依赖
+        run: pip install pandas numpy scipy pymupdf yfinance
+
+      # key 每次轮换（key 不可变，固定 key 会让缓存永远停在第一天），restore-keys 前缀回退到最近一次
+      - name: 取回缓存（新抓的周报文字、标普 / 纳指日线）
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            txt
+            _spx.csv
+            _nasdaq.csv
+          key: rev-${{ github.run_id }}
+          restore-keys: |
+            rev-
+
+      - name: ① 抓新周报
+        id: fetch
+        continue-on-error: true   # 抓不到就用已有的周报照样重算；是否被挡看 status.json 的 factset_http
+        run: |
+          set -o pipefail
+          timeout 40m python3 fetch_factset.py --since-csv 2>&1 | tee fetch.log
+
+      - name: ② 重算并生成页面
+        run: |
+          set -eo pipefail
+          python3 parse_factset.py --incremental 2>&1 | tee build.log
+          python3 analyze.py 2>&1 | tee -a build.log | tail -3
+          python3 realtime.py 2>&1 | tee -a build.log | tail -1
+          # speed.py 直接读 _nasdaq.csv，先刷新
+          python3 -c "import make_chart; make_chart.nasdaq()" 2>&1 | tee -a build.log | tail -3
+          python3 speed.py 2>&1 | tee -a build.log | tail -1
+          python3 make_chart.py 2>&1 | tee -a build.log | grep html
+          grep -h PRICE_FALLBACK build.log | sed 's/^/::warning::/' || true
+
+      # 抓完、算完立刻存缓存——后面任何一步失败都不该把今天抓到的周报丢掉
+      - name: 保存缓存
+        if: ${{ !cancelled() && hashFiles('_nasdaq.csv', 'txt/*.txt') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            txt
+            _spx.csv
+            _nasdaq.csv
+          key: rev-${{ github.run_id }}
+
+      - name: 校验产物
+        run: |
+          python3 - <<'PY'
+          import datetime, io, json, sys
+          s = io.open("修正速度与纳指.html", encoding="utf-8").read()
+          if len(s) < 1_000_000:
+              sys.exit(f"页面只有 {len(s)} 字节，疑似生成失败")
+          i = s.find("const D = ")
+          if i < 0 or "/*DATA*/" in s:
+              sys.exit("页面里没有嵌入数据（const D = /*DATA*/ 没被替换）")
+          d = json.JSONDecoder().raw_decode(s, i + len("const D = "))[0]
+          if len(d["weekly"]) < 600:
+              sys.exit(f"周度数据只有 {len(d['weekly'])} 行，疑似周报解析出错")
+          f = d["fresh"]
+          age = (datetime.date.today() - datetime.date.fromisoformat(f["nasdaq"])).days
+          if age > 5:
+              print(f"::warning::纳指截至 {f['nasdaq']}，已 {age} 天没更新")
+          cur = d["speed"]["rt|8|1.0"]["current"]
+          print(f"周报截至 {f['factset']}　纳指截至 {f['nasdaq']}　超额修正 {d['latest']['x13']}%"
+                f"（{d['latest']['pctile']}% 分位）　阶段 {cur['phase']}（自 {cur['since']} 起）")
+          PY
+
+      - name: ③ Yahoo 成分股快照
+        id: snap
+        if: ${{ !cancelled() && github.event_name != 'push' }}   # 页面没算出来也照拍：快照历史补不回来
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
+          # 成分股名单和行业取最优拟合仓库那份（它的流水线会跟着指数调整更新）
+          curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
+            https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json
+          REV_SECTORS="$RUNNER_TEMP/sectors.json" timeout 20m python3 yahoo_snapshot.py 2>&1 | tee snap.log | tail -2
+
+      - name: 准备 Pages 目录
+        id: site
+        env:
+          FETCH_OUTCOME: ${{ steps.fetch.outcome }}
+          SNAP_OUTCOME: ${{ steps.snap.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p _site
+          cp 修正速度与纳指.html _site/index.html
+          # status.json 给 Claude 的定时任务用：分得清「休市 / 周报还没发」和「今天抓取失败」
+          python3 - <<'PY'
+          import io, json, os, re
+          s = io.open("修正速度与纳指.html", encoding="utf-8").read()
+          i = s.index("const D = ")
+          d = json.JSONDecoder().raw_decode(s, i + len("const D = "))[0]
+          read = lambda p: io.open(p, encoding="utf-8").read() if os.path.exists(p) else ""
+          fl, bl = read("fetch.log"), read("build.log")
+          m = re.search(r"^HTTP_STATUS (.*)$", fl, re.M)
+          http = ({k: int(v) for k, v in (kv.split(":", 1) for kv in m.group(1).split())}
+                  if m and m.group(1) != "none" else {})
+          st = {"generated": d["fresh"]["generated"],
+                "factset": d["fresh"]["factset"],   # 最新一期周报落款日
+                "nasdaq": d["fresh"]["nasdaq"],     # 纳指最新收盘日
+                "new_reports": re.findall(r"->\s+(\d{4}-\d{2}-\d{2}) hub", fl),   # 本次新抓到的周报
+                "factset_fetch_ok": os.environ["FETCH_OUTCOME"] == "success",
+                "factset_http": http,               # 404 = 还没发布；有 403/429/err 而没有 200 → 多半被挡
+                "prices_ok": "PRICE_FALLBACK" not in bl,   # False = 标普/纳指下载失败，用的是缓存
+                "snapshot": os.environ.get("SNAP_OUTCOME") or "skipped",
+                "run_url": os.environ["RUN_URL"], "event": os.environ.get("GITHUB_EVENT_NAME"),
+                "sha": os.environ.get("GITHUB_SHA")}
+          json.dump(st, io.open("_site/status.json", "w", encoding="utf-8"), ensure_ascii=False)
+          print(st)
+          PY
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      # 快照历史只增不改，必须跨运行保存。推送失败会让本次运行标红（GitHub 会发邮件）；页面发布不受影响。
+      - name: 提交 Yahoo 快照
+        if: ${{ !cancelled() && steps.snap.outcome == 'success' }}
+        run: |
+          git add -- yahoo yahoo_agg.csv yahoo_sector.csv
+          if git diff --cached --quiet; then
+            echo "快照无新增"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Yahoo 快照：$(date +%F)"
+          # --autostash：流水线刚重写过受跟踪的 factset_weekly.csv 等文件，不带它 rebase 会以「有未提交改动」拒绝
+          for i in 1 2 3; do
+            if git pull --rebase --autostash --quiet origin main && git push --quiet origin HEAD:main; then
+              echo "已提交 Yahoo 快照 $(date +%F)"
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "推送失败，重试 $i"
+            sleep $((i * 5))
+          done
+          echo "::error::Yahoo 快照推送失败：今天这份只存在于本次运行里，快照历史会缺这一天"
+          exit 1
+
+      - name: 运行摘要
+        if: always()
+        run: |
+          {
+            echo "## 盈利修正 · 每日刷新"
+            for f in fetch.log build.log snap.log; do
+              [ -f "$f" ] || continue
+              echo
+              echo "### $f"
+              echo '```'
+              tail -25 "$f"
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build
+    # 只要页面产物传上去了就发布，哪怕后面「提交 Yahoo 快照」失败
+    if: ${{ !cancelled() && needs.build.outputs.built == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

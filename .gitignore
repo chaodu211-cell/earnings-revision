@@ -1,0 +1,13 @@
+# FactSet《Earnings Insight》周报原文（版权内容）不上传；仓库里只放解析出来的 factset_weekly.csv
+txt/
+
+# 页面由 GitHub Actions 每天生成并发布到 Pages，不进 git（单文件 2 MB，每次都变）
+修正速度与纳指.html
+
+# 行情缓存、日志、临时文件
+_spx.csv
+_nasdaq.csv
+*.log
+_log_*.txt
+__pycache__/
+.DS_Store
