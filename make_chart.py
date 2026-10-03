@@ -276,6 +276,7 @@ tr.cur td { font-weight: 600; }
     </span>
   </div>
   <div class="legend" id="legend"></div>
+  <p class="fresh" id="swingnote" style="margin:6px 0 0"></p>
 
   <div id="chart"></div>
 
@@ -378,10 +379,40 @@ function legend() {
   if (state.marks !== "none") { const [a, b] = MARK_TXT[state.marks];
     h += `<span><b class="mk" style="color:${css("--pos")}">▼</b>${a}</span><span><b class="mk" style="color:${css("--neg")}">▲</b>${b}</span>`; }
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算；底色仍按阈值 ${state.h}）</span>`;
-  if (state.marks === "swing") { const Z = swings();
-    h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；当前处在${Z.mode === "down" ? "回落段" : "上升段"}，段内${Z.mode === "down" ? "最低" : "最高"} ${Z.ext.v.toFixed(2)}%（${day(Z.ext.t)}）</span>`; }
+  if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
+  swingNote();
+}
+
+// 大波段进度：上一个确认点 → 之后的极值 → 最新读数 → 还差多少确认下一个拐点
+function swingNote() {
+  const el = $("#swingnote");
+  if (state.marks !== "swing") { el.style.display = "none"; return; }
+  const Z = swings(), p = Z.all[Z.all.length - 1], f = v => v.toFixed(2) + "%";
+  if (!p || !Z.now) { el.style.display = "none"; return; }
+  const top = p.type === "top", marked = top ? Z.tops.includes(p) : Z.bots.includes(p);
+  const what = top ? "速度见顶" : "速度见底";
+  const lead = `上一个确认：${marked ? (top ? "▼ 上修速度见顶" : "▲ 下修速度见顶") : what + "（不够大波段条件，没标箭头）"}，`
+    + `${top ? "顶" : "底"}在 ${day(p.p.t)}（${f(p.p.v)}），${day(p.c.t)} 确认。`;
+  let rest;
+  if (Z.mode === "down") {
+    const need = Z.ext.v + SW.R, up = Z.now.v - Z.ext.v;
+    const willMark = Z.ext.v <= -SW.L && (Z.last - Z.ext.v) >= SW.A;
+    rest = `之后最低 ${f(Z.ext.v)}（${day(Z.ext.t)}），最新 ${f(Z.now.v)}（${day(Z.now.t)}）`
+      + (Z.now.t > Z.ext.t ? `，已从低点回升 ${up.toFixed(2)} 个百分点` : "，仍在创新低")
+      + `；回升到 ${f(need)} 就确认这一段回落见底`
+      + (willMark ? "，会标 ▲ 下修速度见顶。" : `（底在 −${SW.L}% 以上${(Z.last - Z.ext.v) < SW.A ? "、跌幅不足 " + SW.A + " 个百分点" : ""}，不标箭头）。`);
+  } else {
+    const need = Z.ext.v - SW.R, dn = Z.ext.v - Z.now.v;
+    const willMark = Z.ext.v >= SW.L && (Z.ext.v - Z.last) >= SW.A;
+    rest = `之后最高 ${f(Z.ext.v)}（${day(Z.ext.t)}），最新 ${f(Z.now.v)}（${day(Z.now.t)}）`
+      + (Z.now.t > Z.ext.t ? `，已从高点回落 ${dn.toFixed(2)} 个百分点` : "，仍在创新高")
+      + `；回落到 ${f(need)} 就确认这一段见顶`
+      + (willMark ? "，会标 ▼ 上修速度见顶。" : `（顶在 +${SW.L}% 以下${(Z.ext.v - Z.last) < SW.A ? "、涨幅不足 " + SW.A + " 个百分点" : ""}，不标箭头）。`);
+  }
+  el.style.display = "";
+  el.textContent = "大波段进度（" + (state.src === "rt" ? "实时口径" : "清洗口径") + "）：" + lead + rest;
 }
 
 // 阶段串 → 连续区段
@@ -423,11 +454,12 @@ function bandData() {
 const SW = { R: 2, A: 4, L: 2 };
 function swings() {
   const col = XI(), out = [];
-  let mode = null, ext = null, last = null, hi = null, lo = null;
+  let mode = null, ext = null, last = null, hi = null, lo = null, now = null;
   for (let i = 0; i < WK.length; i++) {
     const v = WK[i][col], t = WK[i][0];
     if (v == null) continue;
     const cur = { t, v };
+    now = cur;
     if (mode === null) {
       if (!hi || v > hi.v) hi = cur;
       if (!lo || v < lo.v) lo = cur;
@@ -444,7 +476,8 @@ function swings() {
     }
   }
   return { tops: out.filter(e => e.type === "top" && e.p.v >= SW.L && e.amp >= SW.A),
-           bots: out.filter(e => e.type === "bot" && e.p.v <= -SW.L && e.amp >= SW.A), mode, ext };
+           bots: out.filter(e => e.type === "bot" && e.p.v <= -SW.L && e.amp >= SW.A),
+           all: out, mode, ext, last, now };
 }
 
 function markSets() {
@@ -453,8 +486,9 @@ function markSets() {
   let up = [], dn = [];
   if (state.marks === "swing") {
     const Z = swings();
-    return { up: Z.tops.map(e => pt(e.c.t, e.c.v)).filter(p => p.px != null),
-             dn: Z.bots.map(e => pt(e.c.t, e.c.v)).filter(p => p.px != null),
+    const det = e => ({ ...pt(e.c.t, e.c.v), piv: day(e.p.t), pv: e.p.v, amp: e.amp, lag: Math.round((e.c.t - e.p.t) / (7 * 864e5)) });
+    return { up: Z.tops.map(det).filter(p => p.px != null),
+             dn: Z.bots.map(det).filter(p => p.px != null),
              piv: [...Z.tops, ...Z.bots].map(e => [e.p.t, e.p.v]) };
   }
   if (state.marks === "ex") {
@@ -494,6 +528,15 @@ function option() {
   const name = NAME[state.idx];
   const M = markSets();
   const mUp = M ? M.up.map(p => [p.t, p.px, p.date]) : [], mDn = M ? M.dn.map(p => [p.t, p.px, p.date]) : [];
+  // 详情框：这一周如果有红蓝三角，写明是什么信号
+  const MK = new Map();
+  if (M) {
+    const [tu, td] = MARK_TXT[state.marks];
+    const add = (p, sym, color, title) => MK.set(p.t, `<br><span style="color:${color}">${sym}</span> <b>${title}</b>`
+      + (p.piv ? `<br><span style="color:${ink2}">　${sym === "▼" ? "顶" : "底"}在 ${p.piv}（${fmt(p.pv, 2)}），此前${sym === "▼" ? "涨" : "跌"} ${p.amp.toFixed(1)} 个百分点，晚 ${p.lag} 周确认</span>` : ""));
+    M.up.forEach(p => add(p, "▼", pos, tu.replace(/（.*）$/, "")));
+    M.dn.forEach(p => add(p, "▲", neg, td.replace(/（.*）$/, "")));
+  }
   // 事后高 / 低点同时标在「速度」那张图上，能直接看到是超额修正的峰 / 谷
   const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
@@ -526,6 +569,7 @@ function option() {
       formatter: ps => {
         const t = ps[0].axisValue, iw = before(WK, t), px = pxAt(t);
         let h = `<b>${day(t)}</b><br>${name}：${px != null ? px.toLocaleString() : "—"}`;
+        if (iw >= 0 && MK.has(WK[iw][0])) h += MK.get(WK[iw][0]);
         if (iw >= 0) {
           const w = WK[iw], x = w[XI()], a = w[AC()], ph = PH[S().phase[iw]];
           const dot = v => `<span style="color:${v > 0 ? pos : neg}">●</span>`;
