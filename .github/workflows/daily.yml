@@ -107,14 +107,14 @@ jobs:
           if i < 0 or "/*DATA*/" in s:
               sys.exit("页面里没有嵌入数据（const D = /*DATA*/ 没被替换）")
           d = json.JSONDecoder().raw_decode(s, i + len("const D = "))[0]
-          if len(d["weekly"]) < 600:
+          if len(d["weekly"]) < 500:   # 纯修正 2016-04 起，2026-10 时 549 行
               sys.exit(f"周度数据只有 {len(d['weekly'])} 行，疑似周报解析出错")
           f = d["fresh"]
           age = (datetime.date.today() - datetime.date.fromisoformat(f["nasdaq"])).days
           if age > 5:
               print(f"::warning::纳指截至 {f['nasdaq']}，已 {age} 天没更新")
           cur = d["speed"]["rt|8|1.0"]["current"]
-          print(f"周报截至 {f['factset']}　纳指截至 {f['nasdaq']}　超额修正 {d['latest']['x13']}%"
+          print(f"周报截至 {f['factset']}　纳指截至 {f['nasdaq']}　纯修正 {d['latest']['x13']}%"
                 f"（{d['latest']['pctile']}% 分位）　阶段 {cur['phase']}（自 {cur['since']} 起）")
           PY
 

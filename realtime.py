@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-实时口径：模拟每周五拿到周报那一刻能算出来的超额修正和二阶导 → _weekly_rt.csv
+实时口径：模拟每周五拿到周报那一刻能算出来的纯修正（x13）和二阶导 → _weekly_rt.csv
 
 和 analyze.py（清洗口径，研究用）的区别：
   清洗口径  笔误按「前后各 2 期中位数」剔除、缺周线性插值——都用到了之后的数据，历史标记比当时看到的干净
@@ -20,7 +20,7 @@ import math, os
 import numpy as np
 import pandas as pd
 
-from analyze import baseline
+from analyze import next_growth, time_roll
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 JUMP, CARRY = 0.02, 3   # 待核实阈值、缺周最多插值几周
@@ -68,11 +68,12 @@ def guard(raw):
 def signals(w):
     lf = np.log(w.eps_final)
     r13f = lf.diff(13)
-    mean = baseline(r13f)  # 2013-07 之前用第一个 3 年均值往前补（事后值），和清洗口径同一规则
-    w["x13_final"] = r13f - mean
+    g, _ = next_growth(w.index)
+    roll13 = time_roll(w.index, g).rolling(13).sum()   # 预测不动时 13 周自然涨的部分（和清洗口径同一算法）
+    w["x13_final"] = r13f - roll13
     # 当周有新读数才更新；待核实 / 缺周记空值（页面上那周没有柱子，阶段维持上周）
     w["r13"] = (np.log(w.eps_raw) - lf.shift(13)).where(w.ok)
-    w["x13"] = w.r13 - mean
+    w["x13"] = w.r13 - roll13                                   # 纯修正
     for n in NS:
         w[f"a{n}"] = w.x13 - w.x13_final.shift(n)                # 当周值 − N 周前（已核实）
     return w

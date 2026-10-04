@@ -5,9 +5,11 @@
 
 信号（每周，周报周五发布、数据截至周四收盘；按周五收盘进出）：
   r13   远期 12 个月 EPS 13 周对数变化（含「时间往前滚」的机械增长）
-  x13   r13 减去它此前 3 年（156 周）的均值 → 相对常态的超额修正，去掉平均滚动增长
-        （攒满 2 年才有均值，即 2013-07 起；2011-07 ~ 2013-07 用第一个均值往前补，见 baseline()）
-  r4    4 周变化，同理 x4
+  x13   纯修正（2026-10-04 起页面主线）：r13 减去「预测一个数都不改时，远期 EPS 随时间往前滚自然涨的部分」（time_roll），
+        剩下的就是分析师真正改了多少。用周报里的明年 EPS 预期增速算（next_growth），2016 年以前周报基本没写 → 2016-04 起
+  x13_excess  原来的「超额修正」：r13 减去它此前 3 年（156 周）的均值（baseline），2011-07 起；
+        这个均值里除了时间滚动还混着过去 3 年的平均修正，上修多的年份会把它抬高（2026-09 达 4%），留作对照
+  r4    4 周变化，同理 x4（纯修正）
 对照：p13 = 标普 13 周价格动量
 
 输出：_analysis.json（数字），终端打印摘要
@@ -75,6 +77,47 @@ def baseline(r):
     return b
 
 
+G_START = pd.Timestamp("2016-01-01")  # 2015 年周报全年没写明年增速，纯修正从 2016 起（13 周窗口 → 2016-04 才有值）
+
+
+def next_growth(index):
+    """每周的「明年全年 EPS 预期增速」（小数），对齐到 index（周五网格）。返回 (g, 是否事后补)。
+    当年已说过 → 最近一次的说法；当年还没说过、但之后说了 → 用当年第一次的说法往前补（事后值）；
+    当年一直没有（只会出现在最新几周，新年刚开始）→ 沿用上一个已知值。"""
+    d = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])[["date", "g_next"]].dropna()
+    d["date"] = d.date + pd.to_timedelta((4 - d.date.dt.weekday) % 7, unit="D")  # 周四出的算到当周五
+    s = d.drop_duplicates("date", keep="last").set_index("date").g_next / 100
+    g = pd.Series(np.nan, index, dtype=float)
+    la = pd.Series(False, index)
+    for y in sorted(set(index.year)):
+        wk = index[index.year == y]
+        sy = s[s.index.year == y]
+        if sy.empty:
+            continue
+        v = sy.reindex(wk.union(sy.index)).ffill().reindex(wk)
+        la[wk[v.isna()]] = True
+        g[wk] = v.fillna(sy.iloc[0])
+    g = g.ffill()
+    g[index < G_START] = np.nan
+    return g, la & g.notna()
+
+
+def time_roll(index, g):
+    """预测不动时，远期 EPS 每周随时间自然涨多少（对数）。
+    远期 12 个月 EPS ≈ 今年 × 今年剩余比例 + 明年 × (1 − 剩余比例) = 今年 × (1 + (1 − 剩余比例) × g)，g = 明年增速；
+    时间往后走一周，权重从今年挪一点到明年。跨年那周：旧年走到年底（= 旧的明年），新年从头开始。
+    （FactSet 按每家公司自己的财年加权，这里用日历年近似；拿周报季末「全年 EPS 改了多少」核对，误差 ≤ 0.5 个百分点）"""
+    rem = pd.Series((pd.to_datetime(index.year.astype(str) + "-12-31") - index).days / 365.0, index).clip(0, 1).values
+    gv, yr = g.values, index.year.values
+    out = np.full(len(index), np.nan)
+    for k in range(1, len(index)):
+        if yr[k] == yr[k - 1]:
+            out[k] = np.log1p((1 - rem[k]) * gv[k]) - np.log1p((1 - rem[k - 1]) * gv[k])
+        else:
+            out[k] = np.log1p(gv[k - 1]) - np.log1p((1 - rem[k - 1]) * gv[k - 1]) + np.log1p((1 - rem[k]) * gv[k])
+    return pd.Series(out, index)
+
+
 def load():
     d = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"]).set_index("date")
     d = d[d.fwd_eps_clean.notna()]
@@ -88,8 +131,12 @@ def load():
     w["guide_pos_share"] = (d.guide_pos / (d.guide_pos + d.guide_neg)).reindex(w.index, method="ffill", limit=2)
     le, lp = np.log(w.eps), np.log(w.px)
     w["r4"], w["r13"] = le.diff(4), le.diff(13)
-    w["x13"] = w.r13 - baseline(w.r13)
-    w["x4"] = w.r4 - baseline(w.r4)
+    w["g_next"], w["g_next_la"] = next_growth(w.index)
+    roll = time_roll(w.index, w.g_next)
+    w["roll13"], w["roll4"] = roll.rolling(13).sum(), roll.rolling(4).sum()
+    w["x13"] = w.r13 - w.roll13            # 纯修正
+    w["x4"] = w.r4 - w.roll4
+    w["x13_excess"] = w.r13 - baseline(w.r13)   # 原来的超额修正，留作对照
     w["p13"] = lp.diff(13)
     pxf = px.reindex(grid)
     for h in (4, 13, 26):

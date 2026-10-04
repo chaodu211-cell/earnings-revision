@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 生成 修正速度与纳指.html：
-  上半：纳指（综合 / 纳斯达克100）+ 超额修正（速度）+ 超额修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
-        超额修正 2011-07 起，2013-07 之前的基准是事后补的（analyze.baseline），中图虚线标出；
+  上半：纳指（综合 / 纳斯达克100）+ 纯修正（速度）+ 纯修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
+        纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），2016-04 起；
         纳指上标出速度见顶的红蓝三角（点击看详情）。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
         （原来的下半部分「速度拐点 × 纳指」收益率分析 2026-10-04 按用户要求删了；统计结论仍在 说明.md、speed.py。）
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
 
-二阶导 = 超额修正本周值 − N 周前的值（N = 4 / 8 / 13，页面上切换）。超额修正本身已是远期 EPS 的变化率（一阶），
+二阶导 = 纯修正本周值 − N 周前的值（N = 4 / 8 / 13，页面上切换）。纯修正本身已是远期 EPS 的变化率（一阶），
 它的变化就是 EPS 的加速度：正 = 上修在加快（或下修在变缓），负 = 上修在减速（或下修在加剧）。
 
 先跑 analyze.py（生成 _weekly_signals.csv、_analysis.json），再跑本脚本：
@@ -57,7 +57,7 @@ CODE = {"上修加速": "A", "上修减速": "B", "下修加速": "C", "下修�
 
 def speed_data(weeks):
     """两种口径 × 每组 (N, h) 跑一遍 speed.run：阶段串（对齐 weekly 行）、阶段表、拐点事件。
-    页面现在只用 phase / current / ex 的日期和超额修正；阶段表、事件和 summary 照旧内嵌，给读这份页面数据的每日任务用
+    页面现在只用 phase / current / ex 的日期和纯修正（字段名仍叫 x13）；阶段表、事件和 summary 照旧内嵌，给读这份页面数据的每日任务用
     （「盈利修正-每日更新」）。拐点前后的逐周路径（mean / each）只给已删的事件走势图用，不再内嵌。"""
     out = {}
     for src in ("rt", "clean"):
@@ -84,10 +84,12 @@ def main():
     wk = w[w.x13.notna()]
     pct = lambda v: None if pd.isna(v) else round(100 * float(v), 2)
     rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True).reindex(wk.index)
-    # 每行：日期, x13, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
+    # 每行：日期, x13（纯修正）, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
+    #       | 扣掉的时间滚动 roll13, 明年增速预期, 明年增速是否事后补（两种口径共用）
     weekly = [[d.strftime("%Y-%m-%d"), pct(r.x13), pct(r.r13), round(r.eps, 2)] + [pct(r[f"a{n}"]) for n in NS]
               + [pct(rt.x13[d])] + [pct(rt[f"a{n}"][d]) for n in NS]
               + [rt.flag[d] if isinstance(rt.flag[d], str) else None]
+              + [pct(r.roll13), pct(r.g_next), 1 if r.g_next_la else 0]
               for d, r in wk.iterrows()]
 
     px = {k: [[d.strftime("%Y-%m-%d"), round(float(v), 2)] for d, v in nq[k].dropna().items()]
@@ -97,10 +99,6 @@ def main():
             "latest": {"date": wk.index[-1].strftime("%Y-%m-%d"), "x13": pct(last.x13),
                        "pctile": round(100 * float((wk.x13 < last.x13).mean())), "r13": pct(last.r13),
                        "eps": round(float(last.eps), 2), **{f"a{n}": pct(last[f"a{n}"]) for n in NS}}}
-
-    # 2013-07 之前超额修正的基准是往前补的事后值（analyze.baseline）：页面上标出这段
-    b = w.r13.rolling(156, min_periods=104).mean().shift(1)
-    data["backfill"] = {"end": b.first_valid_index().strftime("%Y-%m-%d"), "base": pct(b[b.first_valid_index()])}
 
     data["speed"] = speed_data(wk.index)
     fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
@@ -176,7 +174,7 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 <body>
 <div class="wrap">
   <h1>修正速度与纳指</h1>
-  <p class="sub">上：纳指；中：标普500 远期 EPS 的超额修正（一阶，速度）；下：超额修正的 N 周变化（二阶导，加速度）。拖动或滚轮缩放，三图联动。</p>
+  <p class="sub">上：纳指；中：标普500 远期 EPS 的纯修正（分析师 13 周里真正改了多少，一阶，速度）；下：纯修正的 N 周变化（二阶导，加速度）。拖动或滚轮缩放，三图联动。</p>
 
   <p class="fresh" id="fresh"></p>
   <div class="tiles" id="tiles"></div>
@@ -224,25 +222,28 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
   <div id="chart"></div>
 
   <div class="foot">
-    <p>超额修正 = 远期 12 个月 EPS 的 13 周变化 − 它此前 3 年（156 周）的均值，扣掉「时间往前滚」的平均机械增长。至少攒满 2 年才有这个均值（2013-07 起）；
-       2011-07 ~ 2013-07 用第一个均值往前补（= 这两年 13 周变化的平均，1.32%），当时并不知道，是事后值——中图虚线左边这段，包括里面的大波段标记，只当参考。
-       二阶导 = 本周超额修正 − N 周前的超额修正。</p>
+    <p><b>纯修正</b> = 远期 12 个月 EPS 的 13 周变化 − 「预测一个数都不改时，它随时间自己涨的部分」。远期 EPS 是今年、明年两年预测按剩余时间加权，
+       时间往后走，权重从今年挪向明年，明年预期增速越高自己涨得越快（明年 +15% 时一个季度约 +3.5%）。这部分按周报里写的「明年全年 EPS 预期增速」算出来扣掉，
+       剩下的就是分析师真正改了多少；拿 FactSet 周报季末「这个季度里全年 EPS 预测改了多少」核对，误差在 0.5 个百分点以内（FactSet 按各公司财年加权，这里用日历年近似）。
+       周报 2016 年以前基本没写明年增速（2015 年全年没有），所以从 2016-04 起。有些年份上半年周报没写，用当年第一次写的数往前补，是事后值（悬停时标「事后补」）。
+       分析师的预测平均来说会慢慢往下改，所以纯修正平时略小于 0（2016 年以来平均 −0.3%），为正就是真在上调。
+       原来的「超额修正」减的是此前 3 年 13 周变化的平均，上修多的年份会把它抬高（2026-09 达 4%），已不用。
+       二阶导 = 本周纯修正 − N 周前的纯修正。</p>
     <p><b>两种数据口径</b>：<b>实时</b>（默认）= 每周五拿到周报时能算出的值。远期 EPS 和上一个已确认值相比单周变动 > 2% 先标「待核实」（中图 ◇），
        那周不更新信号；下一个有数据的周离原值更近判笔误作废，离可疑值更近判真实变动并补认（晚一周）；周报没给远期市盈率的周同样不更新。
        2011 年以来共拦下 20 周：5 次笔误（2011 年 3 次、2021-06-17、2022-06-17）全部作废，15 次真实大幅变动（2018 年减税、2020 年疫情、2026 年强势上修等）晚一周补认。
        <b>清洗</b> = 研究用：笔误按前后各 2 期中位数剔除、缺周线性插值，用到了之后的数据，历史标记比当时看到的略干净。</p>
-    <p><b>大波段（默认的标记）</b>：只标快速抬升 / 快速下跌之后的速度拐点，只看超额修正本身（中图），和二阶导窗口、去噪阈值无关，只随数据口径变。超额修正从最近一个低点涨了 ≥ 4 个百分点、顶部 ≥ +2%，
+    <p><b>大波段（默认的标记）</b>：只标快速抬升 / 快速下跌之后的速度拐点，只看纯修正本身（中图），和二阶导窗口、去噪阈值无关，只随数据口径变。纯修正从最近一个低点涨了 ≥ 4 个百分点、顶部 ≥ +2%，
        之后从顶部回落满 2 个百分点 → 确认「上修速度见顶」（蓝 ▼）；跌了 ≥ 4 个百分点、谷底 ≤ −2%，之后反弹满 2 个百分点 → 确认「下修速度见顶」（橙 ▲，下修最猛的时候过去了）。
-       2 取的是略高于单周噪声的 95% 分位（1.5），4 约等于超额修正一个标准差（4.4），按噪声定、没按收益挑。确认时就知道这一段真正的顶 / 底在哪周（中图圆圈）。
-       2011-07 以来（实时口径）上修 / 下修各 7 / 6 次，其中虚线左边各 1 次（2012-02 ▲、2012-06 ▼）；按二阶导确认（8 周、阈值 1）是 12 / 11 次；确认滞后中位数 7 周。从 2011 年起算以后多了 2014-10 一次：从 2012-12 的低点算涨了 4.2 个百分点，刚过 4（清洗口径中间多一个小折返，不标）。代价：高位平台上的第二个驼峰不算「快速抬升」，
-       比如 2021-07-23（9.56%，距前一个低点只涨了 3.9 个百分点）不会标。</p>
-    <p><b>三种「拐点」</b>（以 2026 年这次上修见顶为例）：
-       ① 速度真实高点 = 超额修正真正的峰值，严格意义上二阶导 = 0 的点（2026-06-12，9.33%）；要等之后几周回落才能确认，事后才知道。
-       ② 二阶导零点 = 页面上的二阶导由正转负（2026-07-03）。二阶导用的是「本周 − N 周前」，要等当前值跌回 N 周前的水平才到 0，
-       所以比 ① 晚，窗口越长越晚（第一次穿 0 的历史中位数（2013-07 ~ 2026-09 统计，下同）：4 周窗口晚 2 周、8 周晚 3 周、13 周晚 4 周）；
-       代价是窗口越短翻得越勤（每年约 12.6 / 9.7 / 6.9 次），假信号多（如 2026-01-23 转负后，速度 2 月又创新高）。
-       ③ 确认点 = 去噪后的状态翻转：二阶导 > +阈值 才算转入加快、< −阈值 才算转入放慢（下图虚线），再晚几周
-       （2026-07-24；阈值 1 时中位数比 ① 晚：4 周窗口 4 周、8 周 7 周、13 周 9 周），但一年只翻 3 次左右。
+       2 取的是略高于单周噪声的 95% 分位，4 约等于一个标准差，按噪声定、没按收益挑（参数沿用原来超额修正时定的）。确认时就知道这一段真正的顶 / 底在哪周（中图圆圈）。
+       2016-04 以来（实时口径）上修速度见顶 4 次（2018-04、2021-07、2025-11、2026-07），下修速度见顶 3 次（2019-04、2020-06、2023-05）；
+       按二阶导确认（8 周、阈值 1）是 6 / 7 次；确认滞后中位数 4 周。2021-07-23 这个高位驼峰现在会标；
+       2020-10 那段在纯修正里只有 3.8%（原来的超额修正 8.8%：当时明年 2021 预期增速 20% 以上，远期 EPS 涨的大半是时间往前滚），之后只回落 1.6 个百分点，不算一次见顶。</p>
+    <p><b>三种「拐点」</b>（以 2026 年这次上修见顶为例，清洗口径）：
+       ① 速度真实高点 = 纯修正真正的峰值，严格意义上二阶导 = 0 的点（2026-06-12，8.80%；实时口径那周待核实，看到的顶是 06-26）；要等之后几周回落才能确认，事后才知道。
+       ② 二阶导零点 = 页面上的二阶导由正转负（8 周窗口：2026-07-10）。二阶导用的是「本周 − N 周前」，要等当前值跌回 N 周前的水平才到 0，
+       所以比 ① 晚，窗口越长越晚；窗口越短翻得越勤（不去噪时每年约 11.9 / 8.1 / 6.8 次），假信号多（如 2026-01-23 转负后，速度 2 月又创新高）。
+       ③ 确认点 = 去噪后的状态翻转：二阶导 > +阈值 才算转入加快、< −阈值 才算转入放慢（下图虚线），再晚几周（2026-07-24），但一年只翻 2~3 次。
        阈值选 0 时 ③ 就等于 ②。图上每次穿 0 / 每次翻转都标出来。
        事后高低点 = 前后 13 周内的最高 / 最低、突出度 ≥ 2 个百分点。</p>
     <p>EPS 是<b>标普500</b>的（FactSet《Earnings Insight》周报，远期 EPS = 收盘价 ÷ 远期市盈率），没有纳指自己的历史一致预期；纳指收盘价来自 Yahoo。</p>
@@ -267,7 +268,6 @@ const S = () => D.speed[key()];
 
 const tsOf = s => Date.parse(s + "T00:00:00Z");
 const WK = D.weekly.map(r => [tsOf(r[0]), ...r.slice(1)]);
-const BF = tsOf(D.backfill.end);  // 这之前超额修正的基准是事后补的
 const X0 = WK[0][0] - 7 * 864e5;
 const PX = {}; for (const k in D.px) PX[k] = D.px[k].map(r => [tsOf(r[0]), r[1]]).filter(r => r[0] >= X0);
 const X1 = Math.max(WK[WK.length - 1][0], ...Object.values(PX).map(a => a[a.length - 1][0])) + 3 * 864e5;
@@ -286,7 +286,7 @@ function tiles() {
   const pct = Math.round(100 * xs.filter(v => v < lx).length / xs.length);
   const pend = state.src === "rt" && WK[WK.length - 1][FLAG] && !WK[WK.length - 1][FLAG].includes("；");
   const t = [
-    ["超额修正（速度）", fmt(lx), `${day(WK[li][0])}，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")],
+    ["纯修正（速度）", fmt(lx), `${day(WK[li][0])}，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")],
     [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）"],
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`],
     [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`],
@@ -300,7 +300,7 @@ function legend() {
   if (state.marks !== "none") { const [a, b] = MARK_TXT[state.marks];
     h += `<span><b class="mk" style="color:${css("--pos")}">▼</b>${a}</span><span><b class="mk" style="color:${css("--neg")}">▲</b>${b}</span>`; }
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算，和去噪阈值无关）</span>`;
-  if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；只看超额修正，和二阶导窗口、去噪阈值无关</span>`;
+  if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；只看纯修正，和二阶导窗口、去噪阈值无关</span>`;
   if (state.marks !== "none") h += `<span class="muted">点三角看确认日期和实际见顶 / 见底日期</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
@@ -338,12 +338,12 @@ function swingNote() {
 }
 
 // 只标「速度见顶」——按修正的猛烈程度理解：
-//   上修速度见顶 = 超额修正为正、二阶导由正转负（上修最快的时候过去了）→ 蓝色 ▼，标在价格上方
-//   下修速度见顶 = 超额修正为负、二阶导由负转正（下修最猛的时候过去了，即超额修正的谷底）→ 橙色 ▲，标在价格下方
+//   上修速度见顶 = 纯修正为正、二阶导由正转负（上修最快的时候过去了）→ 蓝色 ▼，标在价格上方
+//   下修速度见顶 = 纯修正为负、二阶导由负转正（下修最猛的时候过去了，即纯修正的谷底）→ 橙色 ▲，标在价格下方
 // 不标「速度见底」：上修中重新加快、下修中重新加剧。
-// 三种口径：零点 = 二阶导穿过 0（不去噪）；确认点 = 去噪后状态翻转；事后 = 超额修正真正的局部高点（正）/ 低点（负）
+// 三种口径：零点 = 二阶导穿过 0（不去噪）；确认点 = 去噪后状态翻转；事后 = 纯修正真正的局部高点（正）/ 低点（负）
 // 图上每一次都标出来
-// 大波段（折返）：超额修正从最近一个低点涨了 ≥ A、且顶部 ≥ +L% 之后，从顶部回落满 R → 确认「上修速度见顶」；
+// 大波段（折返）：纯修正从最近一个低点涨了 ≥ A、且顶部 ≥ +L% 之后，从顶部回落满 R → 确认「上修速度见顶」；
 // 跌了 ≥ A、且谷底 ≤ −L% 之后，从谷底反弹满 R → 确认「下修速度见顶」（下修最猛的时候过去了）。
 // R 取 2：略高于单周噪声的 95% 分位（1.5 个百分点）；A 取 4：约一个标准差（4.4）。按噪声定，不按收益挑。
 // 只用当时已有的读数（待核实 / 缺周跳过）；确认那周就知道顶 / 底在哪周（回落前的极值）。
@@ -406,9 +406,9 @@ function markSets() {
 }
 const MARK_TXT = {
   swing: ["上修速度见顶确认（大波段：涨 ≥ 4 个百分点、顶 ≥ +2% 后回落 2 个百分点）", "下修速度见顶确认（大波段：跌 ≥ 4 个百分点、底 ≤ −2% 后反弹 2 个百分点）"],
-  zero: ["上修速度见顶（超额修正 > 0，二阶导由正转负）", "下修速度见顶（超额修正 < 0，二阶导由负转正）"],
-  conf: ["上修速度见顶确认（超额修正 > 0，二阶导跌破 −阈值）", "下修速度见顶确认（超额修正 < 0，二阶导升破 +阈值）"],
-  ex: ["上修速度真实高点（超额修正峰值，事后）", "下修速度真实高点（超额修正谷底，事后）"],
+  zero: ["上修速度见顶（纯修正 > 0，二阶导由正转负）", "下修速度见顶（纯修正 < 0，二阶导由负转正）"],
+  conf: ["上修速度见顶确认（纯修正 > 0，二阶导跌破 −阈值）", "下修速度见顶确认（纯修正 < 0，二阶导升破 +阈值）"],
+  ex: ["上修速度真实高点（纯修正峰值，事后）", "下修速度真实高点（纯修正谷底，事后）"],
 };
 
 const chart = echarts.init($("#chart"), null, { renderer: "canvas" });
@@ -424,7 +424,7 @@ function option() {
   const M = markSets();
   LASTM = M;
   const mUp = M ? M.up.map((p, i) => [p.t, p.px, i]) : [], mDn = M ? M.dn.map((p, i) => [p.t, p.px, i]) : [];
-  // 事后高 / 低点同时标在「速度」那张图上，能直接看到是超额修正的峰 / 谷
+  // 事后高 / 低点同时标在「速度」那张图上，能直接看到是纯修正的峰 / 谷
   const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
     axisLabel: { color: ink2, fontSize: 11 }, splitLine: { lineStyle: { color: border } } };
@@ -447,8 +447,8 @@ function option() {
   return {
     animation: false,
     backgroundColor: "transparent",
-    title: [label(name, 4), label(`超额修正（速度，%；虚线 ${D.backfill.end.slice(0, 7)} 之前的基准是事后补的，只当参考）`, "48.5%"),
-            label(`二阶导：超额修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "71.5%")],
+    title: [label(name, 4), label("纯修正（速度，%：13 周里分析师真正改了多少，已扣掉时间往前滚的部分）", "48.5%"),
+            label(`二阶导：纯修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "71.5%")],
     grid: G,
     axisPointer: { link: [{ xAxisIndex: "all" }], label: { backgroundColor: ink2 } },
     tooltip: {
@@ -461,13 +461,13 @@ function option() {
           const w = WK[iw], x = w[XI()], a = w[AC()], ph = PH[S().phase[iw]];
           const dot = v => `<span style="color:${v > 0 ? pos : neg}">●</span>`;
           h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${w[FLAG] ? "待核实" : "周报未给远期市盈率"}），信号维持上周</span>` : "")
-             + `<br>${x == null ? "" : dot(x)} 超额修正：<b>${fmt(x, 2)}</b>`
+             + `<br>${x == null ? "" : dot(x)} 纯修正：<b>${fmt(x, 2)}</b>`
              + `<br>${a == null ? "" : dot(a)} 二阶导（${state.win}周）：<b>${fmt(a, 2)}</b>`
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
-             + `<br>远期EPS 13周：${fmt(w[2])}　远期EPS：${w[3]}`
+             + `<br>远期EPS：${w[3]}`
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
              + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`
-             + (w[0] < BF ? `<br><span style="color:${ink3}">${day(BF)} 之前还攒不满 2 年：基准用 2011-07 ~ 2013-07 的平均（${D.backfill.base.toFixed(2)}%），是事后值</span>` : "");
+             + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按明年增速预期 ${w[13].toFixed(1)}%${w[14] ? "，当年周报还没写、用之后的说法补" : ""}）</span>` : "");
         }
         return h;
       },
@@ -500,9 +500,8 @@ function option() {
       { type: "scatter", xAxisIndex: 1, yAxisIndex: 1, symbol: "diamond", symbolSize: 9, z: 6, tooltip: { show: false },
         data: state.src === "rt" ? WK.filter(r => r[FLAG]).map(r => [r[0], 0]) : [],
         itemStyle: { color: css("--surface"), borderColor: ink, borderWidth: 1.4 } },
-      { name: "超额修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, data: bars(XI(), pos, neg),
-        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0),
-          { xAxis: BF, lineStyle: { color: ink2, width: 1, type: "dashed" } }] } },
+      { name: "纯修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, data: bars(XI(), pos, neg),
+        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },
     ],
@@ -580,16 +579,16 @@ function showMark(kind, i) {
   const wk = n => Math.round(n / (7 * 864e5)), word = up ? "见顶" : "见底";
   let lines = [];
   if (state.marks === "ex") {
-    lines.push(`实际${word}日期：<b>${p.date}</b>（超额修正 ${fmt(p.x13, 2)}）。这是事后才能确认的真实${up ? "高点" : "低点"}，当时并不知道。`);
+    lines.push(`实际${word}日期：<b>${p.date}</b>（纯修正 ${fmt(p.x13, 2)}）。这是事后才能确认的真实${up ? "高点" : "低点"}，当时并不知道。`);
   } else {
-    lines.push(`确认日期：<b>${p.date}</b>（这一周周五的周报；当时超额修正 ${fmt(p.x13, 2)}）`);
+    lines.push(`确认日期：<b>${p.date}</b>（这一周周五的周报；当时纯修正 ${fmt(p.x13, 2)}）`);
     if (p.piv) {
-      lines.push(`实际${word}日期：<b>${p.piv}</b>（超额修正 ${fmt(p.pv, 2)}）——确认晚了 ${p.lag} 周；此前${up ? "涨" : "跌"}了 ${p.amp.toFixed(1)} 个百分点`);
+      lines.push(`实际${word}日期：<b>${p.piv}</b>（纯修正 ${fmt(p.pv, 2)}）——确认晚了 ${p.lag} 周；此前${up ? "涨" : "跌"}了 ${p.amp.toFixed(1)} 个百分点`);
     } else {
       // 零点 / 确认点没有自带顶底：取确认日之前 26 周内最近的事后真实点
       const L = S().ex[up ? "修正速度高点" : "修正速度低点"].events.filter(e => e.date <= p.date && tsOf(p.date) - tsOf(e.date) <= 26 * 7 * 864e5);
       const e = L[L.length - 1];
-      lines.push(e ? `实际${word}日期（事后看，确认日之前最近的真实${up ? "高点" : "低点"}）：<b>${e.date}</b>（超额修正 ${fmt(e.x13, 2)}）——确认晚了 ${wk(tsOf(p.date) - tsOf(e.date))} 周`
+      lines.push(e ? `实际${word}日期（事后看，确认日之前最近的真实${up ? "高点" : "低点"}）：<b>${e.date}</b>（纯修正 ${fmt(e.x13, 2)}）——确认晚了 ${wk(tsOf(p.date) - tsOf(e.date))} 周`
                    : `确认日之前 26 周内没有事后真实${up ? "高点" : "低点"}（多半是小周期的翻转）`);
     }
   }

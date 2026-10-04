@@ -14,6 +14,8 @@
                  本季度预期同比增速（现在 / 季初）
   guide_q, guide_neg, guide_pos
                  季度 EPS 指引：负面家数 / 正面家数
+  g_next         明年（周报年份 + 1）全年 EPS 预期增速 %（「For CY 2027, analysts are projecting earnings growth of 15.8%」）；
+                 用来算「预测不动时远期 EPS 随时间自然涨多少」（analyze.time_roll）。2016 年以前基本没写，2015 年全年没有
 用法：python3 parse_factset.py                 # 从 txt/ 全量重建
       python3 parse_factset.py --incremental   # 只追加 CSV 里还没有的周报（GitHub Actions 用）
 """
@@ -101,6 +103,22 @@ def parse_guidance(t):
     return m
 
 
+G_NEXT = [re.compile(p) for p in (
+    r"For (?:all of |CY ?)(20\d\d),? (?:analysts are (?:projecting|predicting|expecting|calling for)|analysts (?:predict|project|expect)"
+    r"|the (?:projected|estimated) earnings growth rate is)(?: \(year-over- ?year\))?(?: earnings growth(?: rate)? of| earnings to grow by)? (-?\d+(?:\.\d+)?)%",
+    r"earnings growth to return in CY ?(20\d\d) \((-?\d+(?:\.\d+)?)%",
+    r"growth in earnings in CY ?(20\d\d) \(\+?(-?\d+(?:\.\d+)?)%")]
+
+
+def parse_g_next(t, year):
+    """明年全年 EPS 预期增速（%），周报没写返回 None。全部周报里同一期没有出现过两个不同的值（2026-10-04 核对）。"""
+    for pat in G_NEXT:
+        for m in pat.finditer(t):
+            if int(m.group(1)) == year + 1:
+                return float(m.group(2))
+    return None
+
+
 def qyear(qn, day):
     """周报里只写 Q3，补上年份：取最近一个『已开始』的同号季度。"""
     y = day.year
@@ -121,7 +139,7 @@ def parse_one(path):
     day = datetime.strptime(os.path.basename(path)[:10], "%Y-%m-%d").date()
     t = clean(open(path).read())
     r = {"date": str(day), "fpe": parse_fpe(t), "px": parse_px(t),
-         "fwd_eps_stated": parse_fwd_eps(t), "fwd_eps_qtd": parse_fwd_qtd(t)}
+         "fwd_eps_stated": parse_fwd_eps(t), "fwd_eps_qtd": parse_fwd_qtd(t), "g_next": parse_g_next(t, day.year)}
     q = parse_q_eps(t)
     if q:
         r["q"], r["q_eps"], r["q_eps0"] = qyear(q[0], day), q[1], q[2]
@@ -196,13 +214,13 @@ def main():
 
     cols = ["date", "px", "px_yahoo", "px_used", "fpe", "fwd_eps_stated", "fwd_eps", "fwd_eps_clean", "flag", "fwd_eps_qtd",
             "q", "q_eps", "q_eps0", "q_rev", "q_growth_q", "q_growth", "q_growth0_q", "q_growth0",
-            "guide_q", "guide_neg", "guide_pos"]
+            "guide_q", "guide_neg", "guide_pos", "g_next"]
     with open(out_path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
     n = len(rows)
-    for c in ("fpe", "px", "fwd_eps_stated", "fwd_eps", "fwd_eps_clean", "flag", "fwd_eps_qtd", "q_eps", "q_growth", "guide_neg"):
+    for c in ("fpe", "px", "fwd_eps_stated", "fwd_eps", "fwd_eps_clean", "flag", "fwd_eps_qtd", "q_eps", "q_growth", "guide_neg", "g_next"):
         print(f"{c:15s} {sum(1 for r in rows if r.get(c) not in (None, ''))}/{n}")
 
 if __name__ == "__main__":
