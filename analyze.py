@@ -6,6 +6,7 @@
 信号（每周，周报周五发布、数据截至周四收盘；按周五收盘进出）：
   r13   远期 12 个月 EPS 13 周对数变化（含「时间往前滚」的机械增长）
   x13   r13 减去它此前 3 年（156 周）的均值 → 相对常态的超额修正，去掉平均滚动增长
+        （攒满 2 年才有均值，即 2013-07 起；2011-07 ~ 2013-07 用第一个均值往前补，见 baseline()）
   r4    4 周变化，同理 x4
 对照：p13 = 标普 13 周价格动量
 
@@ -63,6 +64,17 @@ def nw_t(y, X, lag):
     return b, b / np.sqrt(np.diag(V))
 
 
+def baseline(r):
+    """r 此前 3 年（156 周，至少 104 周）的均值，不含当周。
+    2013-07 之前还攒不够 104 周：用第一个均值（= 2011-07 ~ 2013-07 这两年 r 的平均，13 周口径 1.32%）往前补，
+    这样超额修正从 2011-07 就有、2013-07 接上时不跳。这段基准是事后值（2011 年当时并不知道），页面上标明。"""
+    b = r.rolling(156, min_periods=104).mean().shift(1)
+    first = b.first_valid_index()
+    if first is not None:
+        b.loc[:first] = b.loc[first]
+    return b
+
+
 def load():
     d = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"]).set_index("date")
     d = d[d.fwd_eps_clean.notna()]
@@ -76,8 +88,8 @@ def load():
     w["guide_pos_share"] = (d.guide_pos / (d.guide_pos + d.guide_neg)).reindex(w.index, method="ffill", limit=2)
     le, lp = np.log(w.eps), np.log(w.px)
     w["r4"], w["r13"] = le.diff(4), le.diff(13)
-    w["x13"] = w.r13 - w.r13.rolling(156, min_periods=104).mean().shift(1)
-    w["x4"] = w.r4 - w.r4.rolling(156, min_periods=104).mean().shift(1)
+    w["x13"] = w.r13 - baseline(w.r13)
+    w["x4"] = w.r4 - baseline(w.r4)
     w["p13"] = lp.diff(13)
     pxf = px.reindex(grid)
     for h in (4, 13, 26):

@@ -20,6 +20,8 @@ import math, os
 import numpy as np
 import pandas as pd
 
+from analyze import baseline
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 JUMP, CARRY = 0.02, 3   # 待核实阈值、缺周最多插值几周
 NS = (4, 8, 13)
@@ -66,7 +68,7 @@ def guard(raw):
 def signals(w):
     lf = np.log(w.eps_final)
     r13f = lf.diff(13)
-    mean = r13f.rolling(156, min_periods=104).mean().shift(1)
+    mean = baseline(r13f)  # 2013-07 之前用第一个 3 年均值往前补（事后值），和清洗口径同一规则
     w["x13_final"] = r13f - mean
     # 当周有新读数才更新；待核实 / 缺周记空值（页面上那周没有柱子，阶段维持上周）
     w["r13"] = (np.log(w.eps_raw) - lf.shift(13)).where(w.ok)

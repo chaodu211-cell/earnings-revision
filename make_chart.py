@@ -3,6 +3,7 @@
 """
 生成 修正速度与纳指.html：
   上半：纳指（综合 / 纳斯达克100）+ 超额修正（速度）+ 超额修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
+        超额修正 2011-07 起，2013-07 之前的基准是事后补的（analyze.baseline），中图虚线标出；
         纳指上标出速度见顶的红蓝三角（点击看详情）。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
         （原来的下半部分「速度拐点 × 纳指」收益率分析 2026-10-04 按用户要求删了；统计结论仍在 说明.md、speed.py。）
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
@@ -96,6 +97,10 @@ def main():
             "latest": {"date": wk.index[-1].strftime("%Y-%m-%d"), "x13": pct(last.x13),
                        "pctile": round(100 * float((wk.x13 < last.x13).mean())), "r13": pct(last.r13),
                        "eps": round(float(last.eps), 2), **{f"a{n}": pct(last[f"a{n}"]) for n in NS}}}
+
+    # 2013-07 之前超额修正的基准是往前补的事后值（analyze.baseline）：页面上标出这段
+    b = w.r13.rolling(156, min_periods=104).mean().shift(1)
+    data["backfill"] = {"end": b.first_valid_index().strftime("%Y-%m-%d"), "base": pct(b[b.first_valid_index()])}
 
     data["speed"] = speed_data(wk.index)
     fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
@@ -219,7 +224,8 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
   <div id="chart"></div>
 
   <div class="foot">
-    <p>超额修正 = 远期 12 个月 EPS 的 13 周变化 − 它此前 3 年（156 周）的均值，扣掉「时间往前滚」的平均机械增长；需要 3 年历史，所以从 2013 年中起。
+    <p>超额修正 = 远期 12 个月 EPS 的 13 周变化 − 它此前 3 年（156 周）的均值，扣掉「时间往前滚」的平均机械增长。至少攒满 2 年才有这个均值（2013-07 起）；
+       2011-07 ~ 2013-07 用第一个均值往前补（= 这两年 13 周变化的平均，1.32%），当时并不知道，是事后值——中图虚线左边这段，包括里面的大波段标记，只当参考。
        二阶导 = 本周超额修正 − N 周前的超额修正。</p>
     <p><b>两种数据口径</b>：<b>实时</b>（默认）= 每周五拿到周报时能算出的值。远期 EPS 和上一个已确认值相比单周变动 > 2% 先标「待核实」（中图 ◇），
        那周不更新信号；下一个有数据的周离原值更近判笔误作废，离可疑值更近判真实变动并补认（晚一周）；周报没给远期市盈率的周同样不更新。
@@ -228,12 +234,12 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
     <p><b>大波段（默认的标记）</b>：只标快速抬升 / 快速下跌之后的速度拐点，只看超额修正本身（中图），和二阶导窗口、去噪阈值无关，只随数据口径变。超额修正从最近一个低点涨了 ≥ 4 个百分点、顶部 ≥ +2%，
        之后从顶部回落满 2 个百分点 → 确认「上修速度见顶」（蓝 ▼）；跌了 ≥ 4 个百分点、谷底 ≤ −2%，之后反弹满 2 个百分点 → 确认「下修速度见顶」（橙 ▲，下修最猛的时候过去了）。
        2 取的是略高于单周噪声的 95% 分位（1.5），4 约等于超额修正一个标准差（4.4），按噪声定、没按收益挑。确认时就知道这一段真正的顶 / 底在哪周（中图圆圈）。
-       2013 年以来上修 / 下修各 5 次（原来按二阶导确认是 12 / 8 次），确认滞后中位数 7 周。代价：高位平台上的第二个驼峰不算「快速抬升」，
+       2011-07 以来（实时口径）上修 / 下修各 7 / 6 次，其中虚线左边各 1 次（2012-02 ▲、2012-06 ▼）；按二阶导确认（8 周、阈值 1）是 12 / 11 次；确认滞后中位数 7 周。从 2011 年起算以后多了 2014-10 一次：从 2012-12 的低点算涨了 4.2 个百分点，刚过 4（清洗口径中间多一个小折返，不标）。代价：高位平台上的第二个驼峰不算「快速抬升」，
        比如 2021-07-23（9.56%，距前一个低点只涨了 3.9 个百分点）不会标。</p>
     <p><b>三种「拐点」</b>（以 2026 年这次上修见顶为例）：
        ① 速度真实高点 = 超额修正真正的峰值，严格意义上二阶导 = 0 的点（2026-06-12，9.33%）；要等之后几周回落才能确认，事后才知道。
        ② 二阶导零点 = 页面上的二阶导由正转负（2026-07-03）。二阶导用的是「本周 − N 周前」，要等当前值跌回 N 周前的水平才到 0，
-       所以比 ① 晚，窗口越长越晚（第一次穿 0 的历史中位数：4 周窗口晚 2 周、8 周晚 3 周、13 周晚 4 周）；
+       所以比 ① 晚，窗口越长越晚（第一次穿 0 的历史中位数（2013-07 ~ 2026-09 统计，下同）：4 周窗口晚 2 周、8 周晚 3 周、13 周晚 4 周）；
        代价是窗口越短翻得越勤（每年约 12.6 / 9.7 / 6.9 次），假信号多（如 2026-01-23 转负后，速度 2 月又创新高）。
        ③ 确认点 = 去噪后的状态翻转：二阶导 > +阈值 才算转入加快、< −阈值 才算转入放慢（下图虚线），再晚几周
        （2026-07-24；阈值 1 时中位数比 ① 晚：4 周窗口 4 周、8 周 7 周、13 周 9 周），但一年只翻 3 次左右。
@@ -261,6 +267,7 @@ const S = () => D.speed[key()];
 
 const tsOf = s => Date.parse(s + "T00:00:00Z");
 const WK = D.weekly.map(r => [tsOf(r[0]), ...r.slice(1)]);
+const BF = tsOf(D.backfill.end);  // 这之前超额修正的基准是事后补的
 const X0 = WK[0][0] - 7 * 864e5;
 const PX = {}; for (const k in D.px) PX[k] = D.px[k].map(r => [tsOf(r[0]), r[1]]).filter(r => r[0] >= X0);
 const X1 = Math.max(WK[WK.length - 1][0], ...Object.values(PX).map(a => a[a.length - 1][0])) + 3 * 864e5;
@@ -440,7 +447,7 @@ function option() {
   return {
     animation: false,
     backgroundColor: "transparent",
-    title: [label(name, 4), label("超额修正（速度，%）", "48.5%"),
+    title: [label(name, 4), label(`超额修正（速度，%；虚线 ${D.backfill.end.slice(0, 7)} 之前的基准是事后补的，只当参考）`, "48.5%"),
             label(`二阶导：超额修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "71.5%")],
     grid: G,
     axisPointer: { link: [{ xAxisIndex: "all" }], label: { backgroundColor: ink2 } },
@@ -459,7 +466,8 @@ function option() {
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
              + `<br>远期EPS 13周：${fmt(w[2])}　远期EPS：${w[3]}`
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
-             + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`;
+             + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`
+             + (w[0] < BF ? `<br><span style="color:${ink3}">${day(BF)} 之前还攒不满 2 年：基准用 2011-07 ~ 2013-07 的平均（${D.backfill.base.toFixed(2)}%），是事后值</span>` : "");
         }
         return h;
       },
@@ -493,7 +501,8 @@ function option() {
         data: state.src === "rt" ? WK.filter(r => r[FLAG]).map(r => [r[0], 0]) : [],
         itemStyle: { color: css("--surface"), borderColor: ink, borderWidth: 1.4 } },
       { name: "超额修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, data: bars(XI(), pos, neg),
-        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
+        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0),
+          { xAxis: BF, lineStyle: { color: ink2, width: 1, type: "dashed" } }] } },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },
     ],

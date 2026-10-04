@@ -42,40 +42,40 @@
    "corr": -0.159
   },
   "x4->f4": {
-   "n": 700,
+   "n": 804,
    "beta_per_sd_pct": -0.35,
-   "t": -1.51,
-   "corr": -0.082
+   "t": -1.7,
+   "corr": -0.083
   },
   "x4->f13": {
-   "n": 700,
-   "beta_per_sd_pct": -0.82,
-   "t": -1.41,
-   "corr": -0.128
+   "n": 804,
+   "beta_per_sd_pct": -0.94,
+   "t": -1.91,
+   "corr": -0.146
   },
   "x4->f26": {
-   "n": 700,
-   "beta_per_sd_pct": -0.91,
-   "t": -1.05,
-   "corr": -0.112
+   "n": 804,
+   "beta_per_sd_pct": -1.03,
+   "t": -1.39,
+   "corr": -0.13
   },
   "x13->f4": {
-   "n": 691,
-   "beta_per_sd_pct": -0.32,
-   "t": -1.51,
-   "corr": -0.076
+   "n": 795,
+   "beta_per_sd_pct": -0.37,
+   "t": -1.93,
+   "corr": -0.087
   },
   "x13->f13": {
-   "n": 691,
-   "beta_per_sd_pct": -0.73,
-   "t": -1.13,
-   "corr": -0.114
+   "n": 795,
+   "beta_per_sd_pct": -0.78,
+   "t": -1.37,
+   "corr": -0.123
   },
   "x13->f26": {
-   "n": 691,
-   "beta_per_sd_pct": -1.1,
-   "t": -1.08,
-   "corr": -0.136
+   "n": 795,
+   "beta_per_sd_pct": -1.12,
+   "t": -1.24,
+   "corr": -0.143
   },
   "p13->f4": {
    "n": 797,
@@ -114,25 +114,25 @@
    "corr": 0.164
   },
   "x13+p13->f4": {
-   "n": 691,
-   "beta_x13": -0.13,
-   "t_x13": -0.55,
-   "beta_p13": -0.76,
-   "t_p13": -2.26
+   "n": 795,
+   "beta_x13": -0.22,
+   "t_x13": -1.04,
+   "beta_p13": -0.72,
+   "t_p13": -2.44
   },
   "x13+p13->f13": {
-   "n": 691,
-   "beta_x13": -0.44,
-   "t_x13": -0.65,
-   "beta_p13": -1.16,
-   "t_p13": -1.49
+   "n": 795,
+   "beta_x13": -0.51,
+   "t_x13": -0.87,
+   "beta_p13": -1.25,
+   "t_p13": -1.89
   },
   "x13+p13->f26": {
-   "n": 691,
-   "beta_x13": -0.93,
-   "t_x13": -0.92,
-   "beta_p13": -0.69,
-   "t_p13": -0.66
+   "n": 795,
+   "beta_x13": -0.91,
+   "t_x13": -1.01,
+   "beta_p13": -0.98,
+   "t_p13": -1.06
   },
   "r13->f13 [2011-2018]": {
    "n": 390,
@@ -145,9 +145,9 @@
    "t": -1.59
   },
   "x13->f13 [2011-2018]": {
-   "n": 286,
-   "beta_per_sd_pct": -0.14,
-   "t": -0.31
+   "n": 390,
+   "beta_per_sd_pct": -0.55,
+   "t": -1.18
   },
   "x13->f13 [2019-2026]": {
    "n": 405,
@@ -196,25 +196,25 @@
  },
  "state": {
   "x13>0 f4": {
-   "share_time": 0.606,
-   "mean_up_pct": 0.74,
-   "mean_dn_pct": 1.08,
-   "hit_up": 0.656,
-   "hit_dn": 0.654
+   "share_time": 0.591,
+   "mean_up_pct": 0.62,
+   "mean_dn_pct": 1.24,
+   "hit_up": 0.647,
+   "hit_dn": 0.671
   },
   "x13>0 f13": {
-   "share_time": 0.606,
-   "mean_up_pct": 2.37,
-   "mean_dn_pct": 3.63,
-   "hit_up": 0.749,
-   "hit_dn": 0.779
+   "share_time": 0.591,
+   "mean_up_pct": 2.4,
+   "mean_dn_pct": 3.87,
+   "hit_up": 0.745,
+   "hit_dn": 0.788
   },
   "x13>0 f26": {
-   "share_time": 0.606,
-   "mean_up_pct": 4.48,
-   "mean_dn_pct": 7.39,
-   "hit_up": 0.771,
-   "hit_dn": 0.827
+   "share_time": 0.591,
+   "mean_up_pct": 4.84,
+   "mean_dn_pct": 7.7,
+   "hit_up": 0.787,
+   "hit_dn": 0.855
   },
   "r13>0 f4": {
    "share_time": 0.829,
@@ -238,21 +238,21 @@
    "hit_dn": 0.875
   },
   "x13_quintile_f13_mean_pct": [
-   4.33,
-   2.92,
-   1.69,
-   1.42,
-   3.97
+   4.58,
+   3.23,
+   2.32,
+   1.6,
+   3.29
   ]
  },
  "timing": {
   "x13:strategy": {
-   "cagr_pct": 6.17,
+   "cagr_pct": 5.08,
    "maxdd_pct": -22.9,
-   "in_market": 0.604
+   "in_market": 0.589
   },
   "x13:buyhold": {
-   "cagr_pct": 12.23,
+   "cagr_pct": 12.13,
    "maxdd_pct": -31.8,
    "in_market": 1.0
   },
@@ -279,12 +279,36 @@
  },
  "upcycles": [
   {
-   "start": "2013-07-12",
-   "end": "2013-11-29",
+   "start": "2011-07-01",
+   "end": "2011-09-16",
+   "weeks": 11,
+   "px_chg_during_pct": -9.2,
+   "px_chg_prior13w_pct": 0.5,
+   "f13_from_start_pct": -16.9
+  },
+  {
+   "start": "2012-03-23",
+   "end": "2012-08-10",
    "weeks": 20,
-   "px_chg_during_pct": 7.5,
-   "px_chg_prior13w_pct": 5.6,
-   "f13_from_start_pct": 1.4
+   "px_chg_during_pct": 0.6,
+   "px_chg_prior13w_pct": 9.9,
+   "f13_from_start_pct": -4.5
+  },
+  {
+   "start": "2013-05-03",
+   "end": "2013-06-07",
+   "weeks": 5,
+   "px_chg_during_pct": 1.8,
+   "px_chg_prior13w_pct": 6.5,
+   "f13_from_start_pct": 5.7
+  },
+  {
+   "start": "2013-06-14",
+   "end": "2013-11-29",
+   "weeks": 24,
+   "px_chg_during_pct": 11.0,
+   "px_chg_prior13w_pct": 4.1,
+   "f13_from_start_pct": 3.7
   },
   {
    "start": "2014-01-24",
@@ -371,7 +395,10 @@
   {
    "trough": "2011-10-03",
    "r13_low": "2011-11-11",
-   "r13_low_weeks_after_px_low": 5
+   "r13_low_weeks_after_px_low": 5,
+   "x13_turns_up": "2012-03-23",
+   "x13_weeks": 24,
+   "x13_px_from_low_pct": 27.1
   },
   {
    "trough": "2016-02-11",
@@ -708,7 +735,7 @@
   "r4_pct": 1.35,
   "r13_pct": 9.33,
   "x13_pct": 5.28,
-  "x13_pctile": 0.868,
+  "x13_pctile": 0.886,
   "guide_pos_share": 0.621
  }
 }
