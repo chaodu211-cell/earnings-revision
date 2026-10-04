@@ -4,7 +4,8 @@
 生成 修正速度与纳指.html：
   上半：纳指（综合 / 纳斯达克100）+ 纯修正（速度）+ 纯修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
         纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），2016-04 起；
-        纳指上标出速度见顶的红蓝三角（点击看详情）。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
+        纳指上标出速度见顶的红蓝三角（点击看详情）；最下面一张把标普500 13 周涨跌拆成 盈利（远期 EPS）+ 估值（远期市盈率），
+        右上角写当前是盈利抬升还是估值抬升。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
         （原来的下半部分「速度拐点 × 纳指」收益率分析 2026-10-04 按用户要求删了；统计结论仍在 说明.md、speed.py。）
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
 
@@ -86,10 +87,12 @@ def main():
     rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True).reindex(wk.index)
     # 每行：日期, x13（纯修正）, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
     #       | 扣掉的时间滚动 roll13, 明年增速预期, 明年增速是否事后补（两种口径共用）
+    #       | 标普500 13 周涨跌（对数，周五收盘）, 实时口径的远期 EPS 13 周变化 —— 涨跌拆成 盈利 + 估值 用
     weekly = [[d.strftime("%Y-%m-%d"), pct(r.x13), pct(r.r13), round(r.eps, 2)] + [pct(r[f"a{n}"]) for n in NS]
               + [pct(rt.x13[d])] + [pct(rt[f"a{n}"][d]) for n in NS]
               + [rt.flag[d] if isinstance(rt.flag[d], str) else None]
               + [pct(r.roll13), pct(r.g_next), 1 if r.g_next_la else 0]
+              + [pct(r.p13), pct(rt.r13[d])]
               for d, r in wk.iterrows()]
 
     px = {k: [[d.strftime("%Y-%m-%d"), round(float(v), 2)] for d, v in nq[k].dropna().items()]
@@ -124,6 +127,7 @@ TEMPLATE = r"""<!doctype html>
   --surface: #fcfcfb; --surface-2: #f3f2ee; --border: #e6e5e0;
   --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8984;
   --pos: #2a78d6; --neg: #eb6834; --price: #3d3c39; --band: rgba(42,120,214,0.10);
+  --earn: #1a9a74; --val: #8a63d2;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -131,6 +135,7 @@ TEMPLATE = r"""<!doctype html>
     --surface: #1a1a19; --surface-2: #242422; --border: #34332f;
     --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8f8e86;
     --pos: #3987e5; --neg: #d95926; --price: #e4e3dc; --band: rgba(57,135,229,0.16);
+    --earn: #35bf95; --val: #a586ea;
   }
 }
 :root[data-theme="dark"] {
@@ -138,6 +143,7 @@ TEMPLATE = r"""<!doctype html>
   --surface: #1a1a19; --surface-2: #242422; --border: #34332f;
   --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8f8e86;
   --pos: #3987e5; --neg: #d95926; --price: #e4e3dc; --band: rgba(57,135,229,0.16);
+  --earn: #35bf95; --val: #a586ea;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--surface); color: var(--ink);
@@ -162,19 +168,20 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin: 4px 0 0; min-height: 18px; }
 .legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .legend .mk { font-style: normal; font-size: 11px; margin-right: 4px; }
-#chart { width: 100%; height: 800px; }
+#chart { width: 100%; height: 1000px; }
 .muted { color: var(--ink-3); }
 .note { color: var(--ink-2); font-size: 13px; background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
 .note p { margin: 4px 0; }
 .foot { color: var(--ink-3); font-size: 12px; margin-top: 16px; }
 .foot p { margin: 3px 0; }
-@media (max-width: 640px) { #chart { height: 700px; } .tile .v { font-size: 19px; } }
+@media (max-width: 640px) { #chart { height: 880px; } .tile .v { font-size: 19px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>修正速度与纳指</h1>
-  <p class="sub">上：纳指；中：标普500 远期 EPS 的纯修正（分析师 13 周里真正改了多少，一阶，速度）；下：纯修正的 N 周变化（二阶导，加速度）。拖动或滚轮缩放，三图联动。</p>
+  <p class="sub">上：纳指；中：标普500 远期 EPS 的纯修正（分析师 13 周里真正改了多少，一阶，速度）；再下：纯修正的 N 周变化（二阶导，加速度）；
+     最下：标普500 13 周涨跌拆成盈利和估值两块，右上角写当前是盈利抬升还是估值抬升。拖动或滚轮缩放，三图联动。</p>
 
   <p class="fresh" id="fresh"></p>
   <div class="tiles" id="tiles"></div>
@@ -246,6 +253,9 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
        ③ 确认点 = 去噪后的状态翻转：二阶导 > +阈值 才算转入加快、< −阈值 才算转入放慢（下图虚线），再晚几周（2026-07-24），但一年只翻 2~3 次。
        阈值选 0 时 ③ 就等于 ②。图上每次穿 0 / 每次翻转都标出来。
        事后高低点 = 前后 13 周内的最高 / 最低、突出度 ≥ 2 个百分点。</p>
+    <p><b>盈利抬升 / 估值抬升</b>：指数 = 远期 EPS × 远期市盈率，取对数后 13 周涨跌 = 远期 EPS 的 13 周变化（盈利）+ 远期市盈率的 13 周变化（估值），两块正好加起来等于涨跌。
+       涨的时候哪块大就叫哪块抬升；跌的时候哪块跌得多就叫哪块拖累（盈利下修拖累 / 估值收缩拖累）。盈利那块又 = 分析师上调（纯修正）+ 时间往前滚（悬停可看）。
+       用的是标普500（只有它有历史一致预期），纳指走势相近但不完全一样；周五收盘价对周四收盘的周报 EPS，差一天的价格变动算进估值。</p>
     <p>EPS 是<b>标普500</b>的（FactSet《Earnings Insight》周报，远期 EPS = 收盘价 ÷ 远期市盈率），没有纳指自己的历史一致预期；纳指收盘价来自 Yahoo。</p>
   </div>
 </div>
@@ -262,6 +272,19 @@ const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
 // weekly 行里的列：清洗口径 x13 在 1、二阶导在 4/5/6；实时口径 x13 在 7、二阶导在 8/9/10；待核实提示在 11
 const COL = { clean: { x: 1, a: { 4: 4, 8: 5, 13: 6 } }, rt: { x: 7, a: { 4: 8, 8: 9, 13: 10 } } }, FLAG = 11;
 const XI = () => COL[state.src].x, AC = () => COL[state.src].a[state.win];
+// 标普 13 周涨跌在 15；远期 EPS 13 周变化：清洗口径在 2、实时口径在 16。涨跌 = 盈利 + 估值
+const EI = () => state.src === "rt" ? 16 : 2;
+function decomp(r) {
+  const p = r[15], e = r[EI()];
+  if (p == null || e == null) return null;
+  const v = p - e;
+  const kind = p >= 0 ? (e >= v ? "盈利抬升" : "估值抬升") : (e <= v ? "盈利下修拖累" : "估值收缩拖累");
+  return { p, e, v, kind, earn: kind.startsWith("盈利") };
+}
+function lastDecomp() {
+  for (let i = WK.length - 1; i >= 0; i--) { const d = decomp(WK[i]); if (d) return { ...d, t: WK[i][0], i }; }
+  return null;
+}
 const PH = { A: "上修加速", B: "上修减速", C: "下修加速", D: "下修放缓" };
 const key = () => `${state.src}|${state.win}|${state.h.toFixed(1)}`;
 const S = () => D.speed[key()];
@@ -291,6 +314,9 @@ function tiles() {
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`],
     [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`],
   ];
+  const dc = lastDecomp();
+  if (dc) t.push([`标普500 13 周涨跌拆分（${day(dc.t)} 周报）`, `<span style="color:${css(dc.earn ? "--earn" : "--val")}">${dc.kind}</span>`,
+                  `涨跌 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)} + 估值 ${fmt(dc.v)}`]);
   $("#tiles").innerHTML = t.map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
 }
 
@@ -428,10 +454,16 @@ function option() {
   const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
     axisLabel: { color: ink2, fontSize: 11 }, splitLine: { lineStyle: { color: border } } };
-  const G = [{ top: 26, height: "40%" }, { top: "52%", height: "16%" }, { top: "75%", height: "16%" }]
+  const G = [{ top: 50, height: "34.5%" }, { top: "46%", height: "12%" }, { top: "64.5%", height: "12%" }, { top: "83%", height: "10%" }]
     .map(g => ({ left: 64, right: 24, ...g }));
   const xa = i => ({ type: "time", gridIndex: i, min: X0, max: X1, ...ax, splitLine: { show: false },
-    axisLabel: i < 2 ? { show: false } : { color: ink2, fontSize: 11 } });
+    axisLabel: i < 3 ? { show: false } : { color: ink2, fontSize: 11 } });
+  // 涨跌拆分：2020 年 ±30% 会把全图压扁，纵轴同样截在 95 分位附近
+  const earn = css("--earn"), val = css("--val");
+  const DC = WK.map(r => [r[0], decomp(r)]);
+  const dv = DC.flatMap(([, d]) => d ? [Math.abs(d.p), Math.abs(d.e), Math.abs(d.v)] : []).sort((a, b) => a - b);
+  const capD = Math.ceil(dv[Math.floor(dv.length * 0.95)] / 5) * 5;
+  const dcNow = lastDecomp();
   const pctAxis = (i, cap) => ({ type: "value", gridIndex: i, ...ax, splitNumber: 3,
     ...(cap ? { min: v => Math.max(Math.floor(v.min), -cap), max: v => Math.min(Math.ceil(v.max), cap) } : {}),
     axisLabel: { color: ink2, fontSize: 11, formatter: v => v + "%" } });
@@ -447,8 +479,14 @@ function option() {
   return {
     animation: false,
     backgroundColor: "transparent",
-    title: [label(name, 4), label("纯修正（速度，%：13 周里分析师真正改了多少，已扣掉时间往前滚的部分）", "48.5%"),
-            label(`二阶导：纯修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "71.5%")],
+    title: [label(name, 4), label("纯修正（速度，%：13 周里分析师真正改了多少，已扣掉时间往前滚的部分）", "43%"),
+            label(`二阶导：纯修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "61.5%"),
+            { text: `标普500 13 周涨跌拆分（对数 %）：{e|■} 盈利（远期 EPS）  {v|■} 估值（远期市盈率）  — 线 = 指数涨跌（全图纵轴截在 ±${capD}%）`, left: 64, top: "80%",
+              textStyle: { color: ink2, fontSize: 12, fontWeight: 500, rich: { e: { color: earn, fontSize: 12 }, v: { color: val, fontSize: 12 } } } },
+            ...(dcNow ? [{ text: `当前：{k|${dcNow.kind}}`, subtext: `标普 13 周 ${fmt(dcNow.p)} = 盈利 ${fmt(dcNow.e)} + 估值 ${fmt(dcNow.v)}`,
+              right: 28, top: 4, itemGap: 2,
+              textStyle: { color: ink2, fontSize: 13, fontWeight: 500, rich: { k: { color: dcNow.earn ? earn : val, fontSize: 15, fontWeight: 700 } } },
+              subtextStyle: { color: ink3, fontSize: 11 } }] : [])],
     grid: G,
     axisPointer: { link: [{ xAxisIndex: "all" }], label: { backgroundColor: ink2 } },
     tooltip: {
@@ -468,11 +506,14 @@ function option() {
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
              + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`
              + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按明年增速预期 ${w[13].toFixed(1)}%${w[14] ? "，当年周报还没写、用之后的说法补" : ""}）</span>` : "");
+          const dc = decomp(w);
+          if (dc) h += `<br><b style="color:${dc.earn ? css("--earn") : css("--val")}">${dc.kind}</b>：标普 13 周 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)}`
+                     + (x != null && w[12] != null ? `（分析师上调 ${fmt(x)} + 时间滚动 ${fmt(w[12])}）` : "") + ` + 估值 ${fmt(dc.v)}`;
         }
         return h;
       },
     },
-    xAxis: [xa(0), xa(1), xa(2)],
+    xAxis: [xa(0), xa(1), xa(2), xa(3)],
     yAxis: [
       { type: state.scale, gridIndex: 0, scale: true, ...ax,
         min: v => state.scale === "log" ? v.min * 0.96 : v.min - (v.max - v.min) * 0.04,
@@ -481,11 +522,11 @@ function option() {
                      customValues: state.scale === "log" ? state.ticks : undefined,
                      formatter: v => Math.round(v).toLocaleString() },
         axisTick: { show: false, customValues: state.scale === "log" ? state.ticks : undefined } },
-      pctAxis(1), pctAxis(2, cap),
+      pctAxis(1), pctAxis(2, cap), pctAxis(3, capD),
     ],
     dataZoom: [
-      { type: "inside", xAxisIndex: [0, 1, 2], filterMode: "filter" },
-      { type: "slider", xAxisIndex: [0, 1, 2], bottom: 6, height: 20, filterMode: "filter",
+      { type: "inside", xAxisIndex: [0, 1, 2, 3], filterMode: "filter" },
+      { type: "slider", xAxisIndex: [0, 1, 2, 3], bottom: 6, height: 20, filterMode: "filter",
         borderColor: border, fillerColor: css("--band"), handleStyle: { color: css("--surface"), borderColor: ink3 },
         textStyle: { color: ink2 }, dataBackground: { lineStyle: { color: ink3 }, areaStyle: { color: border } },
         labelFormatter: v => day(v).slice(0, 7) },
@@ -504,6 +545,13 @@ function option() {
         markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },
+      { name: "盈利", type: "bar", stack: "dc", xAxisIndex: 3, yAxisIndex: 3, barMaxWidth: 6, itemStyle: { color: earn },
+        data: DC.filter(([, d]) => d).map(([t, d]) => [t, d.e]),
+        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
+      { name: "估值", type: "bar", stack: "dc", xAxisIndex: 3, yAxisIndex: 3, barMaxWidth: 6, itemStyle: { color: val },
+        data: DC.filter(([, d]) => d).map(([t, d]) => [t, d.v]) },
+      { name: "标普13周涨跌", type: "line", xAxisIndex: 3, yAxisIndex: 3, showSymbol: false, z: 4,
+        lineStyle: { color: ink, width: 1.2 }, itemStyle: { color: ink }, data: DC.filter(([, d]) => d).map(([t, d]) => [t, d.p]) },
     ],
   };
 }
