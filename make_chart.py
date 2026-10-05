@@ -6,7 +6,7 @@
         纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），2016-04 起；
         纳指上标出速度见顶的红蓝三角（点击看详情）；最下面一张把标普500 13 周涨跌拆成 盈利（远期 EPS）+ 估值（远期市盈率），
         右上角写当前是盈利抬升还是估值抬升。
-  再下：上修初期名单（early.py）——近 30 天刚开始上修、股价还没跟上的公司，每天记录、跟踪入选后表现。
+  再下：上修初期名单（early.py）——近 30 天刚开始上修、分析师一致上调的公司，按股价分「双确认 / 股价未动」两组，每天记录、分组跟踪。
   图下：上修广度（breadth.py，Yahoo 成分股快照）——上修前 5 的公司、按市值分组、每 30 天前 10 大 vs 其余；快照满 5 天后加每日走势。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
         （原来的下半部分「速度拐点 × 纳指」收益率分析 2026-10-04 按用户要求删了；统计结论仍在 说明.md、speed.py。）
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
@@ -678,23 +678,30 @@ function eaRender() {
   if (!E) { box.style.display = "none"; return; }
   box.style.display = "";
   const f = v => fmt(v, 1), R = E.rule, S = E.summary;
-  let sum = `快照 ${E.date}：${E.n_screened} 家里 <b>${E.list.length} 家</b>符合。`;
-  if (!E.price_ok) sum += "（股价没下载到，今天没法判断条件 ④，名单为空。）";
-  sum += S.n_live ? ` 已跟踪 ${S.n} 家（${E.log_start} 起）：平均超额 <b>${f(S.ex_mean)}</b>（中位数 ${f(S.ex_med)}），跑赢标普 ${S.win}/${S.n_live} 家，持有中位 ${S.days_med} 个交易日。样本还小，至少 1~3 个月再下结论。`
-                  : ` 记录从 ${E.log_start || E.date} 开始，已入选 ${S.n || 0} 家，还没有走完一个交易日。`;
+  const gc = g => g === "双确认" ? css("--earn") : g === "股价未动" ? css("--val") : css("--ink-3");
+  const tag = g => g ? `<span style="color:${gc(g)};font-weight:600">${g}</span>` : `<span class="muted">—</span>`;
+  const cnt = g => E.list.filter(x => x.group === g).length;
+  let sum = `快照 ${E.date}：${E.n_screened} 家里 <b>${E.list.length} 家</b>符合（${tag("双确认")} ${cnt("双确认")} 家、${tag("股价未动")} ${cnt("股价未动")} 家）。`;
+  if (!E.price_ok) sum += "（股价没下载到，今天分不了组。）";
+  const one = (g, st) => st.n_live
+    ? `${tag(g)} ${st.n} 家：平均超额 <b>${f(st.ex_mean)}</b>（中位数 ${f(st.ex_med)}），跑赢标普 ${st.win}/${st.n_live}，持有中位 ${st.days_med} 个交易日`
+    : `${tag(g)} ${st.n} 家，还没走完一个交易日`;
+  sum += `<br>跟踪（${E.log_start || E.date} 起，按第一次入选时的分组）：${one("双确认", S["双确认"])}；${one("股价未动", S["股价未动"])}。`
+    + (S.all.n_live ? " 样本还小，至少 1~3 个月再比两组。" : "");
   $("#ea-sum").innerHTML = sum;
-  $("#ea-rule").textContent = `规则：① 近 30 天远期 EPS 上修 ≥ ${R.r30}%　② 之前 60 天上修 ≤ ${R.pre}%（刚开始）　③ 近 30 天上调预测的分析师 ≥ ${R.up} 人且 ≥ 下调 × ${R.ratio}　④ 近 30 天股价涨幅 < EPS 上修幅度（还没跟上）。`
-    + `90 天股价只列出、不过滤。按「上修 − 股价」从大到小排。每个交易日按最新快照筛一次并记下；入选后从下一个收盘算起。`;
+  $("#ea-rule").textContent = `规则：① 近 30 天远期 EPS 上修 ≥ ${R.r30}%　② 之前 60 天上修 ≤ ${R.pre}%（刚开始）　③ 近 30 天上调预测的分析师 ≥ ${R.up} 人且 ≥ 下调 × ${R.ratio}。`
+    + `再按近 30 天股价分组：跑赢标普（${f(E.spx30)}）= 双确认（基本面拐点 + 股价趋势），没跑赢 = 股价未动。90 天股价只列出、不过滤。`
+    + `每个交易日按最新快照筛一次并记下；入选后从下一个收盘算起。`;
   $("#ea-list-h").textContent = `今天的名单（快照 ${E.date}）`;
-  $("#ea-list").innerHTML = `<tr><th>公司</th><th>市值排名</th><th>行业</th><th>近 30 天上修</th><th>之前 60 天</th><th>上调 / 下调</th><th>近 7 天上调</th><th>股价 30 天</th><th>股价 90 天</th><th>首次入选</th></tr>`
-    + (E.list.length ? E.list.map(x => `<tr><td><b>${x.ticker}</b></td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${f(x.r30)}</td><td>${f(x.r_pre)}</td>`
+  $("#ea-list").innerHTML = `<tr><th>公司</th><th>分组</th><th>市值排名</th><th>行业</th><th>近 30 天上修</th><th>之前 60 天</th><th>上调 / 下调</th><th>近 7 天上调</th><th>股价 30 天</th><th>股价 90 天</th><th>首次入选</th></tr>`
+    + (E.list.length ? E.list.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${f(x.r30)}</td><td>${f(x.r_pre)}</td>`
         + `<td>${x.up} / ${x.dn}</td><td>${x.up7}</td><td>${f(x.p30)}</td><td>${f(x.p90)}</td><td>${x.first}</td></tr>`).join("")
-       : `<tr><td class="muted" colspan="10">今天没有符合条件的公司</td></tr>`);
-  $("#ea-track").innerHTML = `<tr><th>公司</th><th>首次入选</th><th>上榜次数</th><th>最近一次</th><th>建仓（收盘）</th><th>入选后</th><th>同期标普</th><th>超额</th><th>交易日</th></tr>`
-    + (E.track.length ? E.track.map(x => `<tr><td><b>${x.ticker}</b></td><td>${x.first}</td><td>${x.times}</td><td>${x.last}</td>`
+       : `<tr><td class="muted" colspan="11">今天没有符合条件的公司</td></tr>`);
+  $("#ea-track").innerHTML = `<tr><th>公司</th><th>分组</th><th>首次入选</th><th>上榜次数</th><th>最近一次</th><th>建仓（收盘）</th><th>入选后</th><th>同期标普</th><th>超额</th><th>交易日</th></tr>`
+    + (E.track.length ? E.track.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.first}</td><td>${x.times}</td><td>${x.last}</td>`
         + (x.entry ? `<td>${x.entry}</td><td>${f(x.ret)}</td><td>${f(x.spx)}</td><td><b>${f(x.ex)}</b></td><td>${x.days}</td>`
                    : `<td class="muted" colspan="5">等下一个收盘建仓</td>`) + `</tr>`).join("")
-       : `<tr><td class="muted" colspan="9">还没有记录</td></tr>`);
+       : `<tr><td class="muted" colspan="10">还没有记录</td></tr>`);
 }
 
 // 点击红蓝三角 → 详情框：信号、确认日期、实际见顶 / 见底日期、之后纳指
