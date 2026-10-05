@@ -8,6 +8,8 @@
   双重股权合并成一家公司（GOOG→GOOGL、FOX→FOXA、NWS→NWSA）；Yahoo 两个代码给的市值都是全公司的，所以市值用 股本 × 股价
   「前 10 大」按市值；「上修前 5」按贡献的上修金额（股本 × 远期 EPS 的 90 天变化）
 
+广度走势：每个点 = 截至那天的近 30 天（前 10 大 / 其余公司的修正、全部公司的净广度）。最早那份快照还能算出 60、30 天前那两段，
+  之后每份快照添一个点（当天往前 30 天）。净广度 = 修正 > +0.5% 的公司占比 − < −0.5% 的占比（百分点）。
 make_chart.py 调 breadth_data() 内嵌进页面；快照由 GitHub Actions 每个交易日拍一份（页面用到前一天那份）。
 单独跑：python3 breadth.py  → 打印最新一份的摘要
 """
@@ -24,12 +26,20 @@ LAGS = ("current", "30daysAgo", "60daysAgo", "90daysAgo")
 SIZE = [(1, 10, "前 10"), (11, 50, "11–50"), (51, 100, "51–100"), (101, 250, "101–250"), (251, 9999, "251 以后")]
 
 
-def companies(path):
-    """一份快照 → 每家公司一行：市值、各回看点的盈利额、行业、市值排名。"""
+def companies(path, ends=None):
+    """一份快照 → 每家公司一行：市值、各回看点的盈利额、行业、市值排名。
+    ends：之前各份快照里每只股票见过的最晚「本财年结束日」，传进来就纠正倒退的标签并更新它。
+    （Yahoo 偶尔把本财年结束日标回上一年、数值却已是新财年的：MU 10-02 标 2027-08-31，10-03 标 2026-08-31、EPS 不变，
+      按旧标签算权重 = 0，远期 EPS 一天跳 14%。结束日只会往后走，所以取见过的最晚那个。）"""
     day = date.fromisoformat(os.path.basename(path)[:10])
     d = pd.read_csv(path)
     d = d[(d.currency == "USD") & (d.eps_ccy.isna() | (d.eps_ccy == "USD")) & d.shares.notna() & d.price.notna()].copy()
-    w = ((pd.to_datetime(d["0y_end"]) - pd.Timestamp(day)).dt.days / 365).clip(0, 1)
+    end = pd.to_datetime(d["0y_end"])
+    if ends is not None:
+        prev = pd.to_datetime(d.ticker.map(ends))
+        end = end.where(prev.isna() | (end >= prev), prev)
+        ends.update({t: str(e)[:10] for t, e in zip(d.ticker, end) if pd.notna(e)})
+    w = ((end - pd.Timestamp(day)).dt.days / 365).clip(0, 1)
     cols = []
     for lag in LAGS:
         d[f"E_{lag}"] = d.shares * (w * d[f"0y_{lag}"] + (1 - w) * d[f"+1y_{lag}"])
@@ -84,21 +94,32 @@ def summarize(day, g):
     return out
 
 
+def window(day, g, a, b, back):
+    """一段 30 天：从 a 到 b 两个回看点。back = b 离快照日几天，点的日期 = 快照日 − back。"""
+    p = lambda v: None if v is None else round(100 * float(v), 2)
+    top = g["rank"] <= 10
+    rr = (g[b] / g[a] - 1)[g[a] > 0]
+    return {"date": str(pd.Timestamp(day) - pd.Timedelta(days=back))[:10],
+            "top10": p(_rev(g, top, a, b)), "rest": p(_rev(g, ~top, a, b)),
+            "net": p((rr > 0.005).mean() - (rr < -0.005).mean())}
+
+
 def breadth_data():
-    """全部快照 → {"hist": 每天一行, "latest": 最新一份的明细}；没有快照返回 None。"""
+    """全部快照 → {"trend": 广度走势各点, "latest": 最新一份的明细}；没有快照返回 None。"""
     paths = sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv")))
-    if not paths:
-        return None
-    hist, latest = [], None
+    trend, latest, ends = [], None, {}
     for path in paths:
         try:
-            s = summarize(*companies(path))
+            day, g = companies(path, ends)
+            s = summarize(day, g)
         except Exception as e:  # 个别快照坏了不影响页面
             print(f"breadth: 跳过 {os.path.basename(path)}：{e}")
             continue
-        hist.append({k: s[k] for k in ("date", "all", "top10", "rest", "share10", "up", "dn")})
+        if not trend:  # 最早那份：补上 90→60、60→30 天前两段
+            trend += [window(day, g, "E_90daysAgo", "E_60daysAgo", 60), window(day, g, "E_60daysAgo", "E_30daysAgo", 30)]
+        trend.append(window(day, g, "E_30daysAgo", "E_current", 0))
         latest = s
-    return {"hist": hist, "latest": latest} if latest else None
+    return {"trend": trend, "latest": latest} if latest else None
 
 
 if __name__ == "__main__":

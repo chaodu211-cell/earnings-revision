@@ -175,17 +175,16 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 .muted { color: var(--ink-3); }
 h2 { font-size: 17px; font-weight: 600; margin: 26px 0 4px; }
 h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; color: var(--ink-2); }
-.br-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px 22px; margin-top: 10px; }
+.br-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px 22px; margin-top: 10px; }
+.br-grid > div { min-width: 0; }
 .tbl-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 5px 7px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
 th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
 th:first-child, td:first-child { text-align: left; }
-#brchart { width: 100%; height: 240px; margin-top: 12px; }
+#brchart { width: 100%; height: 250px; }
 .note { color: var(--ink-2); font-size: 13px; background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
 .note p { margin: 4px 0; }
-.foot { color: var(--ink-3); font-size: 12px; margin-top: 16px; }
-.foot p { margin: 3px 0; }
 @media (max-width: 640px) { #chart { height: 880px; } .tile .v { font-size: 19px; } }
 </style>
 </head>
@@ -247,47 +246,11 @@ th:first-child, td:first-child { text-align: left; }
     <div class="br-grid">
       <div><h3 id="br-top-h">上修前 5 的公司（按贡献的上修金额）</h3><div class="tbl-wrap"><table id="br-top"></table></div></div>
       <div><h3>按市值分组（近 90 天）</h3><div class="tbl-wrap"><table id="br-size"></table></div></div>
-      <div><h3>每 30 天：前 10 大 vs 其余公司</h3><div class="tbl-wrap"><table id="br-win"></table></div>
-        <p class="fresh" style="margin:6px 0 0">净广度 = 其余公司里上修 > 0.5% 的家数占比 − 下修 < −0.5% 的占比（百分点）</p></div>
+      <div><h3>上修广度走势（每个点 = 截至那天的近 30 天）</h3><div id="brchart"></div>
+        <p class="fresh" id="br-trendnote" style="margin:4px 0 0"></p></div>
     </div>
-    <div id="brchart"></div>
-    <p class="fresh" id="br-histnote" style="margin:4px 0 0"></p>
   </section>
 
-  <div class="foot">
-    <p><b>纯修正</b> = 远期 12 个月 EPS 的 13 周变化 − 「预测一个数都不改时，它随时间自己涨的部分」。远期 EPS 是今年、明年两年预测按剩余时间加权，
-       时间往后走，权重从今年挪向明年，明年预期增速越高自己涨得越快（明年 +15% 时一个季度约 +3.5%）。这部分按周报里写的「明年全年 EPS 预期增速」算出来扣掉，
-       剩下的就是分析师真正改了多少；拿 FactSet 周报季末「这个季度里全年 EPS 预测改了多少」核对，误差在 0.5 个百分点以内（FactSet 按各公司财年加权，这里用日历年近似）。
-       周报 2016 年以前基本没写明年增速（2015 年全年没有），所以从 2016-04 起。有些年份上半年周报没写，用当年第一次写的数往前补，是事后值（悬停时标「事后补」）。
-       分析师的预测平均来说会慢慢往下改，所以纯修正平时略小于 0（2016 年以来平均 −0.3%），为正就是真在上调。
-       原来的「超额修正」减的是此前 3 年 13 周变化的平均，上修多的年份会把它抬高（2026-09 达 4%），已不用。
-       二阶导 = 本周纯修正 − N 周前的纯修正。</p>
-    <p><b>两种数据口径</b>：<b>实时</b>（默认）= 每周五拿到周报时能算出的值。远期 EPS 和上一个已确认值相比单周变动 > 2% 先标「待核实」（中图 ◇），
-       那周不更新信号；下一个有数据的周离原值更近判笔误作废，离可疑值更近判真实变动并补认（晚一周）；周报没给远期市盈率的周同样不更新。
-       2011 年以来共拦下 20 周：5 次笔误（2011 年 3 次、2021-06-17、2022-06-17）全部作废，15 次真实大幅变动（2018 年减税、2020 年疫情、2026 年强势上修等）晚一周补认。
-       <b>清洗</b> = 研究用：笔误按前后各 2 期中位数剔除、缺周线性插值，用到了之后的数据，历史标记比当时看到的略干净。</p>
-    <p><b>大波段（默认的标记）</b>：只标快速抬升 / 快速下跌之后的速度拐点，只看纯修正本身（中图），和二阶导窗口、去噪阈值无关，只随数据口径变。纯修正从最近一个低点涨了 ≥ 4 个百分点、顶部 ≥ +2%，
-       之后从顶部回落满 2 个百分点 → 确认「上修速度见顶」（蓝 ▼）；跌了 ≥ 4 个百分点、谷底 ≤ −2%，之后反弹满 2 个百分点 → 确认「下修速度见顶」（橙 ▲，下修最猛的时候过去了）。
-       2 取的是略高于单周噪声的 95% 分位，4 约等于一个标准差，按噪声定、没按收益挑（参数沿用原来超额修正时定的）。确认时就知道这一段真正的顶 / 底在哪周（中图圆圈）。
-       2016-04 以来（实时口径）上修速度见顶 4 次（2018-04、2021-07、2025-11、2026-07），下修速度见顶 3 次（2019-04、2020-06、2023-05）；
-       按二阶导确认（8 周、阈值 1）是 6 / 7 次；确认滞后中位数 4 周。2021-07-23 这个高位驼峰现在会标；
-       2020-10 那段在纯修正里只有 3.8%（原来的超额修正 8.8%：当时明年 2021 预期增速 20% 以上，远期 EPS 涨的大半是时间往前滚），之后只回落 1.6 个百分点，不算一次见顶。</p>
-    <p><b>三种「拐点」</b>（以 2026 年这次上修见顶为例，清洗口径）：
-       ① 速度真实高点 = 纯修正真正的峰值，严格意义上二阶导 = 0 的点（2026-06-12，8.80%；实时口径那周待核实，看到的顶是 06-26）；要等之后几周回落才能确认，事后才知道。
-       ② 二阶导零点 = 页面上的二阶导由正转负（8 周窗口：2026-07-10）。二阶导用的是「本周 − N 周前」，要等当前值跌回 N 周前的水平才到 0，
-       所以比 ① 晚，窗口越长越晚；窗口越短翻得越勤（不去噪时每年约 11.9 / 8.1 / 6.8 次），假信号多（如 2026-01-23 转负后，速度 2 月又创新高）。
-       ③ 确认点 = 去噪后的状态翻转：二阶导 > +阈值 才算转入加快、< −阈值 才算转入放慢（下图虚线），再晚几周（2026-07-24），但一年只翻 2~3 次。
-       阈值选 0 时 ③ 就等于 ②。图上每次穿 0 / 每次翻转都标出来。
-       事后高低点 = 前后 13 周内的最高 / 最低、突出度 ≥ 2 个百分点。</p>
-    <p><b>盈利抬升 / 估值抬升</b>：指数 = 远期 EPS × 远期市盈率，取对数后 13 周涨跌 = 远期 EPS 的 13 周变化（盈利）+ 远期市盈率的 13 周变化（估值），两块正好加起来等于涨跌。
-       涨的时候哪块大就叫哪块抬升；跌的时候哪块跌得多就叫哪块拖累（盈利下修拖累 / 估值收缩拖累）。盈利那块又 = 分析师上调（纯修正）+ 时间往前滚（悬停可看）。
-       用的是标普500（只有它有历史一致预期），纳指走势相近但不完全一样；周五收盘价对周四收盘的周报 EPS，差一天的价格变动算进估值。</p>
-    <p><b>上修广度</b>：用 Yahoo 的标普500 成分股一致预期快照（GitHub 每个交易日拍一份，页面用最近一份），每家公司比较现在和 7 / 30 / 60 / 90 天前的远期 EPS，
-       今年 / 明年的权重固定，和中图纯修正同一口径。盈利额 = 股本 × 远期 EPS，修正 = 盈利额加总的变化；双重股权（GOOG/GOOGL 等）合并成一家。
-       「前 10 大」按市值，「上修前 5」按贡献的上修金额。判断：前 10 大贡献的上修金额占比 ÷ 它们占指数盈利的比重 ≥ 1.5 叫「偏集中在大公司」，≤ 0.67 叫「中小公司上修更多」，中间叫「大小公司同步」。
-       Yahoo 不给更早的历史，所以只能看近 90 天；每日走势从 2026-10-02 起积累。</p>
-    <p>EPS 是<b>标普500</b>的（FactSet《Earnings Insight》周报，远期 EPS = 收盘价 ÷ 远期市盈率），没有纳指自己的历史一致预期；纳指收盘价来自 Yahoo。</p>
-  </div>
 </div>
 
 <script>/*ECHARTS*/</script>
@@ -670,33 +633,29 @@ function brRender() {
     + `<tr><td class="muted">合计</td><td></td><td></td><td></td><td class="muted">${pc(L.lead5_share)}</td></tr>`;
   $("#br-size").innerHTML = `<tr><th>市值排名</th><th>占指数盈利</th><th>修正</th><th>中位数</th><th>上修>1%</th><th>占上修金额</th></tr>`
     + L.size.map(x => `<tr><td>${x.name}</td><td>${pc(x.w)}</td><td>${f(x.rev)}</td><td>${f(x.med)}</td><td>${pc(x.up)}</td><td>${pc(x.share)}</td></tr>`).join("");
-  $("#br-win").innerHTML = `<tr><th>时间段</th><th>全部</th><th>前 10 大</th><th>其余</th><th>其余净广度</th></tr>`
-    + W.map(x => `<tr><td>${x.name}</td><td>${f(x.all)}</td><td>${f(x.top10)}</td><td>${f(x.rest)}</td><td>${x.net == null ? "—" : (x.net > 0 ? "+" : "") + Math.round(x.net)}</td></tr>`).join("");
-  // 每日走势：快照满 5 天才画
-  const H = B.hist, el = $("#brchart");
-  if (H.length < 5) {
-    el.style.display = "none";
-    $("#br-histnote").textContent = `每日走势：快照从 ${H[0].date} 起每个交易日积累一份，满 5 天后在这里画出「前 10 大 vs 其余」的 90 天修正和前 10 大贡献占比（现在 ${H.length} 天）。`;
-    return;
-  }
-  el.style.display = ""; $("#br-histnote").textContent = "";
+  // 广度走势：前 10 大 / 其余公司的近 30 天修正（左轴），全部公司净广度（灰柱，右轴）
+  const T = B.trend, el = $("#brchart");
   brchart = brchart || echarts.init(el, null, { renderer: "canvas" });
-  const ink2 = css("--ink-2"), border = css("--border"), x = H.map(h => h.date);
+  const ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), xs = T.map(t => tsOf(t.date));
+  const ser = (k) => T.map((t, i) => [xs[i], t[k]]);
   brchart.setOption({
     animation: false, backgroundColor: "transparent",
-    grid: { left: 52, right: 52, top: 30, bottom: 28 },
-    legend: { top: 0, left: 0, textStyle: { color: ink2, fontSize: 12 } },
-    tooltip: { trigger: "axis", backgroundColor: css("--surface"), borderColor: border, textStyle: { color: css("--ink"), fontSize: 12 } },
-    xAxis: { type: "category", data: x, axisLabel: { color: ink2, fontSize: 11 }, axisLine: { lineStyle: { color: border } } },
+    grid: { left: 44, right: 44, top: 34, bottom: 26 },
+    legend: { top: 0, left: 0, itemWidth: 14, itemHeight: 8, textStyle: { color: ink2, fontSize: 11 } },
+    tooltip: { trigger: "axis", backgroundColor: css("--surface"), borderColor: border, textStyle: { color: css("--ink"), fontSize: 12 },
+      formatter: ps => `截至 ${day(ps[0].axisValue)} 的近 30 天<br>` + ps.map(q => `${q.marker}${q.seriesName}：<b>${q.seriesName.startsWith("净广度") ? (q.value[1] > 0 ? "+" : "") + Math.round(q.value[1]) + " 个百分点" : fmt(q.value[1], 2)}</b>`).join("<br>") },
+    xAxis: { type: "time", splitNumber: 3, axisLabel: { color: ink2, fontSize: 11, hideOverlap: true, formatter: v => day(v).slice(5) },
+             axisLine: { lineStyle: { color: border } }, splitLine: { show: false } },
     yAxis: [{ type: "value", axisLabel: { color: ink2, fontSize: 11, formatter: v => v + "%" }, splitLine: { lineStyle: { color: border } } },
-            { type: "value", min: 0, max: 100, axisLabel: { color: ink2, fontSize: 11, formatter: v => v + "%" }, splitLine: { show: false } }],
+            { type: "value", axisLabel: { color: ink3, fontSize: 11 }, splitLine: { show: false } }],
     series: [
-      { name: "前 10 大 90 天修正", type: "line", data: H.map(h => h.top10), showSymbol: false, lineStyle: { width: 2, color: css("--pos") }, itemStyle: { color: css("--pos") } },
-      { name: "其余公司 90 天修正", type: "line", data: H.map(h => h.rest), showSymbol: false, lineStyle: { width: 2, color: css("--earn") }, itemStyle: { color: css("--earn") } },
-      { name: "前 10 大贡献占比（右轴）", type: "line", yAxisIndex: 1, data: H.map(h => h.share10), showSymbol: false,
-        lineStyle: { width: 1.5, type: "dashed", color: ink2 }, itemStyle: { color: ink2 } },
+      { name: "净广度（右轴）", type: "bar", yAxisIndex: 1, barWidth: 10, data: ser("net"), itemStyle: { color: ink3, opacity: 0.45 } },
+      { name: "前 10 大", type: "line", data: ser("top10"), symbolSize: 5, lineStyle: { width: 2, color: css("--pos") }, itemStyle: { color: css("--pos") } },
+      { name: "其余公司", type: "line", data: ser("rest"), symbolSize: 5, lineStyle: { width: 2, color: css("--earn") }, itemStyle: { color: css("--earn") } },
     ],
   }, true);
+  $("#br-trendnote").textContent = `线 = 近 30 天修正；灰柱 = 净广度：近 30 天修正 > +0.5% 的公司占比 − < −0.5% 的占比（全部 ${L.n} 家）。`
+    + (T.length > 2 ? `前两个点取自 ${T[2].date} 那份快照里 60、30 天前的预期，之后每个交易日添一个点。` : "");
 }
 
 // 点击红蓝三角 → 详情框：信号、确认日期、实际见顶 / 见底日期、之后纳指
