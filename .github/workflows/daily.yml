@@ -82,6 +82,10 @@ jobs:
           # speed.py 直接读 _nasdaq.csv，先刷新
           python3 -c "import make_chart; make_chart.nasdaq()" 2>&1 | tee -a build.log | tail -3
           python3 speed.py 2>&1 | tee -a build.log | tail -1
+          # 上修广度表里的行业：取最优拟合仓库的 sectors.json（下载失败只是行业列留空）
+          curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
+            https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json \
+            && export REV_SECTORS="$RUNNER_TEMP/sectors.json" || echo "::warning::sectors.json 下载失败，上修广度表不显示行业"
           python3 make_chart.py 2>&1 | tee -a build.log | grep html
           grep -h PRICE_FALLBACK build.log | sed 's/^/::warning::/' || true
 
