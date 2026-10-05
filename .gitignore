@@ -7,6 +7,7 @@ txt/
 # 行情缓存、日志、临时文件
 _spx.csv
 _nasdaq.csv
+_members_px.csv
 *.log
 _log_*.txt
 __pycache__/

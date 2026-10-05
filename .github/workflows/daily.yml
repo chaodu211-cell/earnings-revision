@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # 只用来提交 Yahoo 快照：yahoo/、yahoo_agg.csv、yahoo_sector.csv
+  contents: write   # 只用来提交 Yahoo 快照：yahoo/、yahoo_agg.csv、yahoo_sector.csv，以及上修初期名单记录 early_log.csv
   pages: write
   id-token: write
 
@@ -62,6 +62,7 @@ jobs:
             txt
             _spx.csv
             _nasdaq.csv
+            _members_px.csv
           key: rev-${{ github.run_id }}
           restore-keys: |
             rev-
@@ -98,6 +99,7 @@ jobs:
             txt
             _spx.csv
             _nasdaq.csv
+            _members_px.csv
           key: rev-${{ github.run_id }}
 
       - name: 校验产物
@@ -177,14 +179,14 @@ jobs:
       - name: 提交 Yahoo 快照
         if: ${{ !cancelled() && steps.snap.outcome == 'success' }}
         run: |
-          git add -- yahoo yahoo_agg.csv yahoo_sector.csv
+          git add -- yahoo yahoo_agg.csv yahoo_sector.csv early_log.csv
           if git diff --cached --quiet; then
             echo "快照无新增"
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -q -m "Yahoo 快照：$(date +%F)"
+          git commit -q -m "Yahoo 快照 + 上修初期名单：$(date +%F)"
           # --autostash：流水线刚重写过受跟踪的 factset_weekly.csv 等文件，不带它 rebase 会以「有未提交改动」拒绝
           for i in 1 2 3; do
             if git pull --rebase --autostash --quiet origin main && git push --quiet origin HEAD:main; then
