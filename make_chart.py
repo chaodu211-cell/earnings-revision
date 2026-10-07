@@ -297,6 +297,9 @@ const S = () => D.speed[key()];
 
 const tsOf = s => Date.parse(s + "T00:00:00Z");
 const WK = D.weekly.map(r => [tsOf(r[0]), ...r.slice(1)]);
+// Yahoo 成分股快照算的全指数 90 天纯修正，每个交易日一点（FactSet 周报停刊 / 待核实时看它）
+const YD = (D.breadth && D.breadth.daily || []).filter(d => d.rev90 != null).map(d => [tsOf(d.date), d.rev90]);
+const ydAt = t => { let b = null; for (const p of YD) if (Math.abs(p[0] - t) <= 3.5 * 864e5 && (!b || Math.abs(p[0] - t) < Math.abs(b[0] - t))) b = p; return b; };
 const X0 = WK[0][0] - 7 * 864e5;
 const PX = {}; for (const k in D.px) PX[k] = D.px[k].map(r => [tsOf(r[0]), r[1]]).filter(r => r[0] >= X0);
 const X1 = Math.max(WK[WK.length - 1][0], ...Object.values(PX).map(a => a[a.length - 1][0])) + 3 * 864e5;
@@ -315,7 +318,8 @@ function tiles() {
   const pct = Math.round(100 * xs.filter(v => v < lx).length / xs.length);
   const pend = state.src === "rt" && WK[WK.length - 1][FLAG] && !WK[WK.length - 1][FLAG].includes("；");
   const t = [
-    ["纯修正（速度）", fmt(lx), `${day(WK[li][0])}，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")],
+    ["纯修正（速度）", fmt(lx), `${day(WK[li][0])} 周报，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")
+      + (YD.length ? `；Yahoo 日度 ${day(YD[YD.length - 1][0]).slice(5)}：${fmt(YD[YD.length - 1][1])}` : "")],
     [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）"],
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`],
     [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`],
@@ -334,6 +338,7 @@ function legend() {
   if (state.marks === "zero" && state.h > 0) h += `<span class="muted">（零点固定按不去噪算，和去噪阈值无关）</span>`;
   if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；只看纯修正，和二阶导窗口、去噪阈值无关</span>`;
   if (state.marks !== "none") h += `<span class="muted">点三角看确认日期和实际见顶 / 见底日期</span>`;
+  if (YD.length) h += `<span><b class="mk" style="color:${css("--ink")}">●—</b>Yahoo 日度（中图，${day(YD[0][0])} 起每个交易日一点；FactSet 周报每年停刊 5~8 周，停刊 / 待核实时看它）</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
   swingNote();
@@ -512,6 +517,8 @@ function option() {
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
              + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`
              + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按明年增速预期 ${w[13].toFixed(1)}%${w[14] ? "，当年周报还没写、用之后的说法补" : ""}）</span>` : "");
+          const yd = ydAt(t);
+          if (yd) h += `<br><span style="color:${ink}">●</span> Yahoo 日度纯修正（${day(yd[0]).slice(5)}，90 天）：<b>${fmt(yd[1], 2)}</b>`;
           const dc = decomp(w);
           if (dc) h += `<br><b style="color:${dc.earn ? css("--earn") : css("--val")}">${dc.kind}</b>：标普 13 周 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)}`
                      + (x != null && w[12] != null ? `（分析师上调 ${fmt(x)} + 时间滚动 ${fmt(w[12])}）` : "") + ` + 估值 ${fmt(dc.v)}`;
@@ -547,6 +554,8 @@ function option() {
       { type: "scatter", xAxisIndex: 1, yAxisIndex: 1, symbol: "diamond", symbolSize: 9, z: 6, tooltip: { show: false },
         data: state.src === "rt" ? WK.filter(r => r[FLAG]).map(r => [r[0], 0]) : [],
         itemStyle: { color: css("--surface"), borderColor: ink, borderWidth: 1.4 } },
+      { name: "Yahoo 日度", type: "line", xAxisIndex: 1, yAxisIndex: 1, z: 6, symbol: "circle", symbolSize: 4, tooltip: { show: false },
+        lineStyle: { color: ink, width: 1.2 }, itemStyle: { color: ink }, data: YD },
       { name: "纯修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, data: bars(XI(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, data: bars(AC(), pos, neg),

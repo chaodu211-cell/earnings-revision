@@ -105,9 +105,9 @@ def window(day, g, a, b, back):
 
 
 def breadth_data():
-    """全部快照 → {"trend": 广度走势各点, "latest": 最新一份的明细}；没有快照返回 None。"""
+    """全部快照 → {"trend": 广度走势各点, "daily": 每天的全指数 90 天纯修正, "latest": 最新一份的明细}；没有快照返回 None。"""
     paths = sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv")))
-    trend, latest, ends = [], None, {}
+    trend, daily, latest, ends = [], [], None, {}
     for path in paths:
         try:
             day, g = companies(path, ends)
@@ -118,8 +118,10 @@ def breadth_data():
         if not trend:  # 最早那份：补上 90→60、60→30 天前两段
             trend += [window(day, g, "E_90daysAgo", "E_60daysAgo", 60), window(day, g, "E_60daysAgo", "E_30daysAgo", 30)]
         trend.append(window(day, g, "E_30daysAgo", "E_current", 0))
+        daily.append({"date": s["date"], "rev90": s["all"]})
         latest = s
-    return {"trend": trend, "latest": latest} if latest else None
+    # daily：每份快照的全指数 90 天（≈13 周）纯修正——FactSet 周报停刊（每年 8 月中下旬两周、感恩节、年末等）或待核实时页面用它补
+    return {"trend": trend, "daily": daily, "latest": latest} if latest else None
 
 
 if __name__ == "__main__":
