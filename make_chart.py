@@ -87,16 +87,20 @@ def main():
         w[f"a{n}"] = w.x13.diff(n)  # 在完整周网格上差分，缺周处自然是空值
 
     wk = w[w.x13.notna()]
+    fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
+    issued = set(fw.date + pd.to_timedelta((4 - fw.date.dt.weekday) % 7, unit="D"))   # 周报落款日对到周五网格
     pct = lambda v: None if pd.isna(v) else round(100 * float(v), 2)
     rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True).reindex(wk.index)
     # 每行：日期, x13（纯修正）, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
     #       | 扣掉的时间滚动 roll13, 明年增速预期, 明年增速是否事后补（两种口径共用）
     #       | 标普500 13 周涨跌（对数，周五收盘）, 实时口径的远期 EPS 13 周变化 —— 涨跌拆成 盈利 + 估值 用
+    #       | 实时口径的事后值 x13_final（笔误作废、停刊周插值后）, FactSet 这周有没有周报 —— 实时口径没有读数的周画空心柱用
     weekly = [[d.strftime("%Y-%m-%d"), pct(r.x13), pct(r.r13), round(r.eps, 2)] + [pct(r[f"a{n}"]) for n in NS]
               + [pct(rt.x13[d])] + [pct(rt[f"a{n}"][d]) for n in NS]
               + [rt.flag[d] if isinstance(rt.flag[d], str) else None]
               + [pct(r.roll13), pct(r.g_next), 1 if r.g_next_la else 0]
               + [pct(r.p13), pct(rt.r13[d])]
+              + [pct(rt.x13_final[d]), 1 if d in issued else 0]
               for d, r in wk.iterrows()]
 
     px = {k: [[d.strftime("%Y-%m-%d"), round(float(v), 2)] for d, v in nq[k].dropna().items()]
@@ -339,6 +343,7 @@ function legend() {
   if (state.marks === "swing") h += `<span class="muted">中图圆圈 = 这一段真正的顶 / 底；只看纯修正，和二阶导窗口、去噪阈值无关</span>`;
   if (state.marks !== "none") h += `<span class="muted">点三角看确认日期和实际见顶 / 见底日期</span>`;
   if (YD.length) h += `<span><b class="mk" style="color:${css("--ink")}">●—</b>Yahoo 日度（中图，${day(YD[0][0])} 起每个交易日一点；FactSet 周报每年停刊 5~8 周，停刊 / 待核实时看它）</span>`;
+  if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink-2")}">▯</b>空心柱 = 当时没有新读数的周（FactSet 停刊 / 待核实），画事后补的值，不进信号</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
   $("#legend").innerHTML = h;
   swingNote();
@@ -450,6 +455,22 @@ const MARK_TXT = {
 
 const chart = echarts.init($("#chart"), null, { renderer: "canvas" });
 
+// 实时口径里当时没有新读数的周（FactSet 停刊 / 待核实 / 没写市盈率）：画事后补的值，空心柱，不进信号
+const XF = 17, ISSUED = 18;
+const FM = new Map(WK.map(r => [r[0], r[XF]]));
+function hollow(kind, pos, neg) {
+  if (state.src !== "rt") return [];
+  const n = state.win, out = [];
+  for (const r of WK) {
+    if (kind === "x" ? r[XI()] != null : r[AC()] != null) continue;
+    let v = r[XF];
+    if (kind === "a") { const b = FM.get(r[0] - n * 7 * 864e5); v = v == null || b == null ? null : Math.round((v - b) * 100) / 100; }
+    if (v == null) continue;
+    const c = v > 0 ? pos : neg;
+    out.push({ value: [r[0], v], itemStyle: { color: "transparent", borderColor: c, borderWidth: 1 } });
+  }
+  return out;
+}
 function bars(col, pos, neg) {
   return WK.filter(r => r[col] != null).map(r => ({ value: [r[0], r[col]], itemStyle: { color: r[col] > 0 ? pos : neg } }));
 }
@@ -509,13 +530,15 @@ function option() {
         if (iw >= 0) {
           const w = WK[iw], x = w[XI()], a = w[AC()], ph = PH[S().phase[iw]];
           const dot = v => `<span style="color:${v > 0 ? pos : neg}">●</span>`;
-          h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${w[FLAG] ? "待核实" : "周报未给远期市盈率"}），信号维持上周</span>` : "")
+          const why = w[FLAG] ? "远期 EPS 单周变动 > 2%，待核实" : !w[ISSUED] ? "FactSet 这周停刊" : "周报没写远期市盈率";
+          h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${why}），信号维持上周；`
+                + `空心柱是事后补的值 ${fmt(w[XF], 2)}（${w[FLAG] ? "下一期核实后" : "前后两期插值"}）</span>` : "")
              + `<br>${x == null ? "" : dot(x)} 纯修正：<b>${fmt(x, 2)}</b>`
              + `<br>${a == null ? "" : dot(a)} 二阶导（${state.win}周）：<b>${fmt(a, 2)}</b>`
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
              + `<br>远期EPS：${w[3]}`
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
-             + `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`
+             + (x == null && state.src === "rt" ? "" : `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`)
              + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按明年增速预期 ${w[13].toFixed(1)}%${w[14] ? "，当年周报还没写、用之后的说法补" : ""}）</span>` : "");
           const yd = ydAt(t);
           if (yd) h += `<br><span style="color:${ink}">●</span> Yahoo 日度纯修正（${day(yd[0]).slice(5)}，90 天）：<b>${fmt(yd[1], 2)}</b>`;
@@ -556,9 +579,11 @@ function option() {
         itemStyle: { color: css("--surface"), borderColor: ink, borderWidth: 1.4 } },
       { name: "Yahoo 日度", type: "line", xAxisIndex: 1, yAxisIndex: 1, z: 6, symbol: "circle", symbolSize: 4, tooltip: { show: false },
         lineStyle: { color: ink, width: 1.2 }, itemStyle: { color: ink }, data: YD },
-      { name: "纯修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, data: bars(XI(), pos, neg),
+      { name: "纯修正（事后值）", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, barGap: "-100%", data: hollow("x", pos, neg) },
+      { name: "纯修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, barGap: "-100%", data: bars(XI(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
-      { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, data: bars(AC(), pos, neg),
+      { name: "二阶导（事后值）", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: hollow("a", pos, neg) },
+      { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },
       { name: "盈利", type: "bar", stack: "dc", xAxisIndex: 3, yAxisIndex: 3, barMaxWidth: 6, itemStyle: { color: earn },
         data: DC.filter(([, d]) => d).map(([t, d]) => [t, d.e]),
