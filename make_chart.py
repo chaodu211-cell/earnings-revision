@@ -198,9 +198,6 @@ th:first-child, td:first-child { text-align: left; }
 <body>
 <div class="wrap">
   <h1>修正速度与纳指</h1>
-  <p class="sub">上：纳指；中：标普500 远期 EPS 的纯修正（分析师 13 周里真正改了多少，一阶，速度）；再下：纯修正的 N 周变化（二阶导，加速度）；
-     最下：标普500 13 周涨跌拆成盈利和估值两块，右上角写当前是盈利抬升还是估值抬升。拖动或滚轮缩放，三图联动。</p>
-
   <p class="fresh" id="fresh"></p>
   <div class="tiles" id="tiles"></div>
 
@@ -241,7 +238,6 @@ th:first-child, td:first-child { text-align: left; }
     </span>
   </div>
   <div class="legend" id="legend"></div>
-  <p class="fresh" id="swingnote" style="margin:6px 0 0"></p>
   <div class="note" id="markinfo" style="display:none"></div>
 
   <div id="chart"></div>
@@ -352,6 +348,7 @@ function legend() {
 // 大波段进度：上一个确认点 → 之后的极值 → 最新读数 → 还差多少确认下一个拐点
 function swingNote() {
   const el = $("#swingnote");
+  if (!el) return;
   if (state.marks !== "swing") { el.style.display = "none"; return; }
   const Z = swings(), p = Z.all[Z.all.length - 1], f = v => v.toFixed(2) + "%";
   if (!p || !Z.now) { el.style.display = "none"; return; }
