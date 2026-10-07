@@ -26,8 +26,8 @@ LAGS = ("current", "30daysAgo", "60daysAgo", "90daysAgo")
 SIZE = [(1, 10, "前 10"), (11, 50, "11–50"), (51, 100, "51–100"), (101, 250, "101–250"), (251, 9999, "251 以后")]
 
 
-def companies(path, ends=None):
-    """一份快照 → 每家公司一行：市值、各回看点的盈利额、行业、市值排名。
+def _load(path, ends=None):
+    """读一份快照，过滤掉非美元的，算每只股票本财年的剩余权重 w。
     ends：之前各份快照里每只股票见过的最晚「本财年结束日」，传进来就纠正倒退的标签并更新它。
     （Yahoo 偶尔把本财年结束日标回上一年、数值却已是新财年的：MU 10-02 标 2027-08-31，10-03 标 2026-08-31、EPS 不变，
       按旧标签算权重 = 0，远期 EPS 一天跳 14%。结束日只会往后走，所以取见过的最晚那个。）"""
@@ -40,6 +40,29 @@ def companies(path, ends=None):
         end = end.where(prev.isna() | (end >= prev), prev)
         ends.update({t: str(e)[:10] for t, e in zip(d.ticker, end) if pd.notna(e)})
     w = ((end - pd.Timestamp(day)).dt.days / 365).clip(0, 1)
+    return day, d, w
+
+
+def index_7d():
+    """每份快照的全指数 7 天纯修正（对数，Σ股本×远期EPS 今天 vs 7 天前，权重固定）：{快照日 Timestamp: 值}。
+    realtime.guard 用它当场判断 FactSet 单周大幅变动是真是假。"""
+    ends, out = {}, {}
+    for path in sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv"))):
+        try:
+            day, d, w = _load(path, ends)
+        except Exception:
+            continue
+        e1 = d.shares * (w * d["0y_current"] + (1 - w) * d["+1y_current"])
+        e0 = d.shares * (w * d["0y_7daysAgo"] + (1 - w) * d["+1y_7daysAgo"])
+        m = e1.notna() & e0.notna()
+        if m.sum() >= 400 and e0[m].sum() > 0:
+            out[pd.Timestamp(day)] = float(np.log(e1[m].sum() / e0[m].sum()))
+    return out
+
+
+def companies(path, ends=None):
+    """一份快照 → 每家公司一行：市值、各回看点的盈利额、行业、市值排名（财年标签纠正见 _load）。"""
+    day, d, w = _load(path, ends)
     cols = []
     for lag in LAGS:
         d[f"E_{lag}"] = d.shares * (w * d[f"0y_{lag}"] + (1 - w) * d[f"+1y_{lag}"])

@@ -344,7 +344,7 @@ function legend() {
   if (state.marks !== "none") h += `<span class="muted">点三角看确认日期和实际见顶 / 见底日期</span>`;
   if (YD.length) h += `<span><b class="mk" style="color:${css("--ink")}">●—</b>Yahoo 日度（中图，${day(YD[0][0])} 起每个交易日一点；FactSet 周报每年停刊 5~8 周，停刊 / 待核实时看它）</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink-2")}">▯</b>空心柱 = 当时没有新读数的周（FactSet 停刊 / 待核实），画事后补的值，不进信号</span>`;
-  if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%，下一个有数据的周核实）</span>`;
+  if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%：有当周 Yahoo 快照就当场判真假，判不了才等下一期）</span>`;
   $("#legend").innerHTML = h;
   swingNote();
 }
@@ -530,9 +530,10 @@ function option() {
         if (iw >= 0) {
           const w = WK[iw], x = w[XI()], a = w[AC()], ph = PH[S().phase[iw]];
           const dot = v => `<span style="color:${v > 0 ? pos : neg}">●</span>`;
-          const why = w[FLAG] ? "远期 EPS 单周变动 > 2%，待核实" : !w[ISSUED] ? "FactSet 这周停刊" : "周报没写远期市盈率";
+          const voided = w[FLAG] && w[FLAG].includes("笔误");
+          const why = w[FLAG] ? (voided ? "远期 EPS 单周变动 > 2%，判为笔误作废" : "远期 EPS 单周变动 > 2%，待核实") : !w[ISSUED] ? "FactSet 这周停刊" : "周报没写远期市盈率";
           h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${why}），信号维持上周；`
-                + `空心柱是事后补的值 ${fmt(w[XF], 2)}（${w[FLAG] ? "下一期核实后" : "前后两期插值"}）</span>` : "")
+                + `空心柱是事后补的值 ${fmt(w[XF], 2)}（${w[FLAG] && !voided ? "下一期核实后" : "前后两期插值"}）</span>` : "")
              + `<br>${x == null ? "" : dot(x)} 纯修正：<b>${fmt(x, 2)}</b>`
              + `<br>${a == null ? "" : dot(a)} 二阶导（${state.win}周）：<b>${fmt(a, 2)}</b>`
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
