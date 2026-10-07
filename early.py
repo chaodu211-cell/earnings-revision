@@ -51,8 +51,27 @@ def prices(tickers, start):
         if not os.environ.get("CI"):
             os.environ.setdefault("https_proxy", "http://127.0.0.1:15236")
         import yfinance as yf
-        px = yf.download(tickers, start=str(start), auto_adjust=True, progress=False, threads=True)["Close"]
-        px.index = pd.to_datetime(px.index).tz_localize(None).normalize()
+        def get(ts, threads):
+            p = yf.download(ts, start=str(start), auto_adjust=True, progress=False, threads=threads)["Close"]
+            p.index = pd.to_datetime(p.index).tz_localize(None).normalize()
+            return p.reindex(columns=ts)
+        empty = lambda p: [t for t in p if p[t].notna().sum() <= 20]
+        px = get(tickers, True)
+        # 并发拉 500 只时 Yahoo 会随机把一部分打回空（TypeError 'NoneType'，每次名单不同），单线程补一遍
+        if empty(px):
+            again = get(empty(px), False)
+            for t in empty(again):
+                again.pop(t)
+            px = px.combine_first(again) if len(again.columns) else px
+        # 还是空的沿用缓存里这只的旧价，不拿空列覆盖
+        if empty(px) and os.path.exists(PX):
+            old = pd.read_csv(PX, index_col=0, parse_dates=True)
+            keep = [t for t in empty(px) if t in old and old[t].notna().sum() > 20]
+            if keep:
+                px[keep] = old[keep].reindex(px.index)
+                print(f"early: {len(keep)} 只下载为空，沿用缓存旧价：{keep}", file=sys.stderr)
+        if empty(px):
+            print(f"early: {len(empty(px))} 只没有股价：{empty(px)}", file=sys.stderr)
         if px.notna().sum().gt(20).sum() < 0.8 * len(tickers):   # 被限流时常常大半是空列
             raise RuntimeError(f"只拿到 {px.notna().sum().gt(20).sum()}/{len(tickers)} 只")
         px = drop_partial(px)   # 美股收盘前 Yahoo 会把当天盘中价当一根日线
