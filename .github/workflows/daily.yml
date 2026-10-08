@@ -37,8 +37,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次非 push 的发布（拍了 Yahoo 快照）、
-  # 行情下载成功，就跳过。代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
+  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次行情下载成功的发布，就跳过。
+  # 不看是不是 push 发布的、拍没拍快照：晚到的 cron 落在美股盘中，③ 本来就不会拍（见那一步的盘中闸门），
+  # 照跑也补不回快照，只会重复算一遍页面。代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
   check:
     runs-on: ubuntu-latest
     outputs:
@@ -57,8 +58,7 @@ jobs:
           cutoff = now.replace(hour=11, minute=0, second=0, microsecond=0)   # 当天 11:00 UTC = 北京 19:00
           # generated 是北京时间 "YYYY-MM-DD HH:MM"（build 作业设了 TZ=Asia/Shanghai）
           gen = datetime.strptime(st["generated"], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
-          skip = (gen >= cutoff and st.get("event") != "push"
-                  and st.get("snapshot") == "success" and bool(st.get("prices_ok")))
+          skip = gen >= cutoff and bool(st.get("prices_ok"))
           print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），快照 {st.get('snapshot')}，"
                 f"行情 {st.get('prices_ok')} → " + ("今天的已发布，跳过" if skip else "今天的还没有，照跑"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
@@ -158,6 +158,9 @@ jobs:
                 f"（{d['latest']['pctile']}% 分位）　阶段 {cur['phase']}（自 {cur['since']} 起）")
           PY
 
+      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30 不拍。快照按北京日期命名、每天只拍一次，
+      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，拍下的盘中数据记成了次日的快照，
+      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。宁可当天缺一份，也不要盘中那份。
       - name: ③ Yahoo 成分股快照
         id: snap
         if: ${{ !cancelled() && github.event_name != 'push' }}   # 页面没算出来也照拍：快照历史补不回来
@@ -165,6 +168,12 @@ jobs:
         run: |
           set -o pipefail
           if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
+          ET_DOW=$(TZ=America/New_York date +%u); ET_HM=$(TZ=America/New_York date +%H%M)
+          if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ]; then
+            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中，不拍（$(date +%F) 的快照留给盘前那次）"
+            echo "guard=market_hours" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # 成分股名单和行业取最优拟合仓库那份（它的流水线会跟着指数调整更新）
           curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
             https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json
@@ -175,6 +184,7 @@ jobs:
         env:
           FETCH_OUTCOME: ${{ steps.fetch.outcome }}
           SNAP_OUTCOME: ${{ steps.snap.outcome }}
+          SNAP_GUARD: ${{ steps.snap.outputs.guard }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           mkdir -p _site
@@ -197,7 +207,7 @@ jobs:
                 "factset_fetch_ok": os.environ["FETCH_OUTCOME"] == "success",
                 "factset_http": http,               # 404 = 还没发布；有 403/429/err 而没有 200 → 多半被挡
                 "prices_ok": "PRICE_FALLBACK" not in bl,   # False = 标普/纳指下载失败，用的是缓存
-                "snapshot": os.environ.get("SNAP_OUTCOME") or "skipped",
+                "snapshot": os.environ.get("SNAP_GUARD") or os.environ.get("SNAP_OUTCOME") or "skipped",   # market_hours = 盘中闸门没拍
                 "run_url": os.environ["RUN_URL"], "event": os.environ.get("GITHUB_EVENT_NAME"),
                 "sha": os.environ.get("GITHUB_SHA")}
           json.dump(st, io.open("_site/status.json", "w", encoding="utf-8"), ensure_ascii=False)
