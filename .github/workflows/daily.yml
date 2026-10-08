@@ -37,14 +37,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次行情下载成功的发布，就跳过。
-  # 不看是不是 push 发布的、拍没拍快照：晚到的 cron 落在美股盘中，③ 本来就不会拍（见那一步的盘中闸门），
-  # 照跑也补不回快照，只会重复算一遍页面。代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
+  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次行情下载成功的发布，
+  # 并且这次跑了也拍不了快照（main 上已有北京今天的 yahoo/ 文件，或者 ③ 的盘中闸门此刻会拦），就跳过。
+  # 不看 status.json 的 event / snapshot：晚上推一次代码，push 那次发布会把它们改成 push / skipped。
+  # 代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
   check:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.check.outputs.skip }}
     steps:
+      - if: ${{ github.event_name == 'schedule' }}
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: yahoo
       - id: check
         if: ${{ github.event_name == 'schedule' }}
         run: |
@@ -58,9 +63,14 @@ jobs:
           cutoff = now.replace(hour=11, minute=0, second=0, microsecond=0)   # 当天 11:00 UTC = 北京 19:00
           # generated 是北京时间 "YYYY-MM-DD HH:MM"（build 作业设了 TZ=Asia/Shanghai）
           gen = datetime.strptime(st["generated"], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
-          skip = gen >= cutoff and bool(st.get("prices_ok"))
-          print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），快照 {st.get('snapshot')}，"
-                f"行情 {st.get('prices_ok')} → " + ("今天的已发布，跳过" if skip else "今天的还没有，照跑"))
+          bj, et = now.astimezone(ZoneInfo("Asia/Shanghai")), now.astimezone(ZoneInfo("America/New_York"))
+          snap_done = os.path.exists(f"yahoo/{bj:%Y-%m-%d}.csv")
+          # 与 ③ 的盘中闸门同一条件
+          blocked = et.weekday() < 5 and 900 <= et.hour * 100 + et.minute < 1630 and bj.date() != et.date()
+          skip = gen >= cutoff and bool(st.get("prices_ok")) and (snap_done or blocked)
+          print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），行情 {st.get('prices_ok')}；"
+                f"北京 {bj:%m-%d} 的快照{'已有' if snap_done else '还没有'}，盘中闸门{'会拦' if blocked else '不拦'} → "
+                + ("今天的已发布，跳过" if skip else "照跑"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"skip={'true' if skip else 'false'}\n")
           PY
@@ -158,9 +168,9 @@ jobs:
                 f"（{d['latest']['pctile']}% 分位）　阶段 {cur['phase']}（自 {cur['since']} 起）")
           PY
 
-      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30 不拍。快照按北京日期命名、每天只拍一次，
-      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，拍下的盘中数据记成了次日的快照，
-      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。宁可当天缺一份，也不要盘中那份。
+      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30、且北京已经是第二天时不拍。快照按北京日期命名、每天只拍一次，
+      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，前一天盘中的数据记成了次日的快照，
+      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。北京日期与美东相同时（北京 21:00~24:00 手动补跑）照拍。
       - name: ③ Yahoo 成分股快照
         id: snap
         if: ${{ !cancelled() && github.event_name != 'push' }}   # 页面没算出来也照拍：快照历史补不回来
@@ -169,8 +179,9 @@ jobs:
           set -o pipefail
           if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
           ET_DOW=$(TZ=America/New_York date +%u); ET_HM=$(TZ=America/New_York date +%H%M)
-          if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ]; then
-            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中，不拍（$(date +%F) 的快照留给盘前那次）"
+          if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ] \
+             && [ "$(date +%F)" != "$(TZ=America/New_York date +%F)" ]; then
+            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中、北京已是 $(date +%F)，不拍（这天的快照留给北京 19:23 盘前那次）"
             echo "guard=market_hours" >> "$GITHUB_OUTPUT"
             exit 0
           fi
