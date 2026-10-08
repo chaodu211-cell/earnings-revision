@@ -7,6 +7,10 @@ name: daily
 #     https://chaodu211-cell.github.io/earnings-revision/ ，同目录另有 status.json（各数据截至日、抓取是否成功）。
 #   · Claude 的定时任务：北京时间 20:50 读取上面那个页面，更新 Artifact，推送到手机。
 #
+# 准时由外部负责：2026-10 起 GitHub 的定时触发常晚 6 小时以上（10-06、10-07 北京次日 01:16、01:51 才到，
+# 正赶上美股盘中，Yahoo 快照也被记到了第二天的日期上）。所以每个工作日北京 19:18 由 Claude 定时任务
+# 手动运行（workflow_dispatch）本工作流；cron 只作兜底，晚到时若今天的页面和快照都已发布就整趟跳过。
+#
 # txt/（FactSet 周报原文，版权内容）不进 git，仓库里只有本地全量解析出来的 factset_weekly.csv。
 # 这里每次只抓 CSV 最新一期之后的周报（fetch_factset.py --since-csv），追加解析（parse_factset.py --incremental），
 # 新抓的 txt/ 用 actions/cache 在两次运行之间保存。本地推上来更新过的 factset_weekly.csv 之后，这里自然从那一期往后接。
@@ -33,7 +37,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次非 push 的发布（拍了 Yahoo 快照）、
+  # 行情下载成功，就跳过。代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        if: ${{ github.event_name == 'schedule' }}
+        run: |
+          curl -fsS --retry 3 "https://chaodu211-cell.github.io/earnings-revision/status.json?t=$(date +%s)" -o status.json || exit 0
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from zoneinfo import ZoneInfo
+          st = json.load(open("status.json", encoding="utf-8"))
+          now = datetime.now(timezone.utc)
+          cutoff = now.replace(hour=11, minute=0, second=0, microsecond=0)   # 当天 11:00 UTC = 北京 19:00
+          # generated 是北京时间 "YYYY-MM-DD HH:MM"（build 作业设了 TZ=Asia/Shanghai）
+          gen = datetime.strptime(st["generated"], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+          skip = (gen >= cutoff and st.get("event") != "push"
+                  and st.get("snapshot") == "success" and bool(st.get("prices_ok")))
+          print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），快照 {st.get('snapshot')}，"
+                f"行情 {st.get('prices_ok')} → " + ("今天的已发布，跳过" if skip else "今天的还没有，照跑"))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"skip={'true' if skip else 'false'}\n")
+          PY
+
   build:
+    needs: check
+    if: ${{ needs.check.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
