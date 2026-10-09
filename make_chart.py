@@ -716,20 +716,20 @@ function eaRender() {
   let sum = `快照 ${E.date}：${E.n_screened} 家里 <b>${E.list.length} 家</b>符合（${tag("双确认")} ${cnt("双确认")} 家、${tag("股价未动")} ${cnt("股价未动")} 家）。`;
   if (!E.price_ok) sum += "（股价没下载到，今天分不了组。）";
   const one = (g, st) => st.n_live
-    ? `${tag(g)} ${st.n} 家：平均超额 <b>${f(st.ex_mean)}</b>（中位数 ${f(st.ex_med)}），跑赢标普 ${st.win}/${st.n_live}，持有中位 ${st.days_med} 个交易日`
+    ? `${tag(g)} ${st.n} 家：平均超额 <b>${f(st.ex_mean)}</b>（中位数 ${f(st.ex_med)}），跑赢 SPY ${st.win}/${st.n_live}，持有中位 ${st.days_med} 个交易日`
     : `${tag(g)} ${st.n} 家，还没走完一个交易日`;
   sum += `<br>跟踪（${E.log_start || E.date} 起，按第一次入选时的分组）：${one("双确认", S["双确认"])}；${one("股价未动", S["股价未动"])}。`
     + (S.all.n_live ? " 样本还小，至少 1~3 个月再比两组。" : "");
   $("#ea-sum").innerHTML = sum;
   $("#ea-rule").textContent = `规则：① 近 30 天远期 EPS 上修 ≥ ${R.r30}%　② 之前 60 天上修 ≤ ${R.pre}%（刚开始）　③ 近 30 天上调预测的分析师 ≥ ${R.up} 人且 ≥ 下调 × ${R.ratio}。`
     + `再按近 30 天股价分组：跑赢标普（${f(E.spx30)}）= 双确认（基本面拐点 + 股价趋势），没跑赢 = 股价未动。90 天股价只列出、不过滤。`
-    + `每个交易日按最新快照筛一次并记下；入选后从下一个收盘算起。`;
+    + `每个交易日按最新快照筛一次并记下；入选后从下一个收盘算起，对照 SPY（含分红，和个股同口径）。`;
   $("#ea-list-h").textContent = `今天的名单（快照 ${E.date}）`;
   $("#ea-list").innerHTML = `<tr><th>公司</th><th>分组</th><th>市值排名</th><th>行业</th><th>近 30 天上修</th><th>之前 60 天</th><th>上调 / 下调</th><th>近 7 天上调</th><th>股价 30 天</th><th>股价 90 天</th><th>首次入选</th></tr>`
     + (E.list.length ? E.list.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${f(x.r30)}</td><td>${f(x.r_pre)}</td>`
         + `<td>${x.up} / ${x.dn}</td><td>${x.up7}</td><td>${f(x.p30)}</td><td>${f(x.p90)}</td><td>${x.first}</td></tr>`).join("")
        : `<tr><td class="muted" colspan="11">今天没有符合条件的公司</td></tr>`);
-  $("#ea-track").innerHTML = `<tr><th>公司</th><th>分组</th><th>首次入选</th><th>上榜次数</th><th>最近一次</th><th>建仓（收盘）</th><th>入选后</th><th>同期标普</th><th>超额</th><th>交易日</th></tr>`
+  $("#ea-track").innerHTML = `<tr><th>公司</th><th>分组</th><th>首次入选</th><th>上榜次数</th><th>最近一次</th><th>建仓（收盘）</th><th>入选后</th><th>同期 SPY</th><th>超额</th><th>交易日</th></tr>`
     + (E.track.length ? E.track.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.first}</td><td>${x.times}</td><td>${x.last}</td>`
         + (x.entry ? `<td>${x.entry}</td><td>${f(x.ret)}</td><td>${f(x.spx)}</td><td><b>${f(x.ex)}</b></td><td>${x.days}</td>`
                    : `<td class="muted" colspan="5">等下一个收盘建仓</td>`) + `</tr>`).join("")

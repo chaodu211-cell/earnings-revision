@@ -16,7 +16,8 @@
   （90 天股价涨幅只列出、不过滤：用户 2026-10-05 要求先不加）
 
 股价：yfinance 日线（_members_px.csv 缓存，不进 git）。快照日 D 是北京时间，那时美股 D 日还没开盘：
-  分组用 D 日之前最后一个收盘（个股和标普同口径）；入选后的表现从 D 日（含）起第一个收盘算起，对照标普500（^GSPC）。
+  分组用 D 日之前最后一个收盘（个股和标普同口径）；入选后的表现从 D 日（含）起第一个收盘算起，对照 SPY
+  （2026-10-09 起；含分红，和个股复权收益同口径。之前对照 ^GSPC 价格指数，超额每年多算约 1.3 个百分点。分组仍用 ^GSPC，规则不改）。
 记录：early_log.csv（快照日, 股票, 入选时各项指标），只在 GitHub Actions 上写（CI=true 或 REV_RECORD=1），随快照一起提交；
   同一快照重算结果相同（指标都按快照日之前的数据），所以重跑只会覆盖同样的行。
       early_px.csv（日期, 股票, 收盘, 当日复权收益），入选过的股票从入选前最后一个收盘起逐日记、外加 SPY / ^GSPC，
@@ -66,7 +67,7 @@ def download(tickers, start, adjust=True):
 
 def prices(tickers, start):
     """日线收盘（复权）。缓存 3 小时；REV_FORCE_FETCH（Actions）时每次重下，失败退回缓存。返回 (DataFrame, 是否新下载)。"""
-    tickers = sorted(set(tickers) | {"^GSPC"})
+    tickers = sorted(set(tickers) | {"^GSPC", "SPY"})
     fresh = (os.path.exists(PX) and time.time() - os.path.getmtime(PX) < 3 * 3600 and not os.environ.get("REV_FORCE_FETCH"))
     if fresh:
         px = pd.read_csv(PX, index_col=0, parse_dates=True)
@@ -96,7 +97,7 @@ def prices(tickers, start):
 def record_px(log):
     """逐日股价 early_px.csv（进 git，给以后积累够了做长期分析）：入选过的股票从第一次入选前最后一个收盘（分组用的就是它）起，
     每个交易日一行——close 收盘（未按分红复权）、ret 当日收益（复权，含分红；复权因子事后会变，但相邻两天的比值不变，记下的不会过时）。
-    基准 SPY（含分红，和个股同口径）、^GSPC（价格指数，页面跟踪用它）从最早一次入选起记。
+    基准 SPY（含分红，和个股同口径，页面跟踪用它）、^GSPC（价格指数，分组用它）从最早一次入选起记。
     只往后追加、不改旧行：成分股被收购、退市后 Yahoo 常常查不到历史股价，留在这里的就是全部。
     每只从自己最后一行往后补，漏跑的日子下次补上（最多往回 60 天）。"""
     if log.empty:
@@ -195,7 +196,8 @@ def track(log, px):
     if log.empty or px is None:
         return [], {}
     out = []
-    spx = px["^GSPC"].dropna()
+    # 含分红，和个股复权收益同口径（字段名仍叫 spx）；缓存是加 SPY 之前的、又没下载到时，只列名单不算表现
+    spx = px["SPY"].dropna() if "SPY" in px else pd.Series(dtype=float, index=pd.DatetimeIndex([]))
     for t, h in log.groupby("ticker"):
         d0 = pd.Timestamp(h.date.min())
         h = h.sort_values("date")
