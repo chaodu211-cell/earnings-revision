@@ -28,7 +28,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # 只用来提交 Yahoo 快照：yahoo/、yahoo_agg.csv、yahoo_sector.csv，以及上修初期名单记录 early_log.csv
+  contents: write   # 只用来提交 Yahoo 快照：yahoo/、yahoo_agg.csv、yahoo_sector.csv，以及上修初期名单记录 early_log.csv、early_px.csv
   pages: write
   id-token: write
 
@@ -234,7 +234,7 @@ jobs:
       - name: 提交 Yahoo 快照
         if: ${{ !cancelled() && steps.snap.outcome == 'success' }}
         run: |
-          git add -- yahoo yahoo_agg.csv yahoo_sector.csv early_log.csv
+          git add -- yahoo yahoo_agg.csv yahoo_sector.csv early_log.csv early_px.csv
           if git diff --cached --quiet; then
             echo "快照无新增"
             exit 0

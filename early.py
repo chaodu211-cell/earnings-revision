@@ -19,6 +19,8 @@
   分组用 D 日之前最后一个收盘（个股和标普同口径）；入选后的表现从 D 日（含）起第一个收盘算起，对照标普500（^GSPC）。
 记录：early_log.csv（快照日, 股票, 入选时各项指标），只在 GitHub Actions 上写（CI=true 或 REV_RECORD=1），随快照一起提交；
   同一快照重算结果相同（指标都按快照日之前的数据），所以重跑只会覆盖同样的行。
+      early_px.csv（日期, 股票, 收盘, 当日复权收益），入选过的股票从入选前最后一个收盘起逐日记、外加 SPY / ^GSPC，
+  同样只在 Actions 上写、随快照提交（2026-10-09 加）。只追加不改：退市、被收购的股票 Yahoo 事后常查不到，长期分析靠这份。
 用法：python3 early.py               # 打印最新名单和跟踪摘要（本地不写记录）
       python3 early.py --record-all  # 仓库里每份快照都筛一遍写进 early_log.csv（补记）
 """
@@ -37,6 +39,29 @@ PX = os.path.join(BASE, "_members_px.csv")
 RULE = {"r30": 0.03, "pre": 0.02, "up": 3, "ratio": 2}
 COLS = ["date", "ticker", "group", "rank", "sector", "r30", "r_pre", "up", "dn", "up7", "p30", "p90", "spx30", "n_analysts"]
 GROUPS = ("双确认", "股价未动")
+PXLOG = os.path.join(BASE, "early_px.csv")
+PXCOLS = ["date", "ticker", "close", "ret"]
+BENCH = ("SPY", "^GSPC")
+
+
+def download(tickers, start, adjust=True):
+    """yfinance 日线，列是（字段, 股票）两层，美股收盘前当天那根盘中价已去掉。
+    并发拉 500 只时 Yahoo 会随机把一部分打回空（TypeError 'NoneType'，每次名单不同），单线程补一遍。"""
+    if not os.environ.get("CI"):
+        os.environ.setdefault("https_proxy", "http://127.0.0.1:15236")
+    import yfinance as yf
+    def get(ts, threads):
+        d = yf.download(ts, start=str(start), auto_adjust=adjust, progress=False, threads=threads)
+        d.index = pd.to_datetime(d.index).tz_localize(None).normalize()
+        return d
+    empty = lambda d: [t for t in tickers if t not in d["Close"] or d["Close"][t].isna().all()]
+    d = get(list(tickers), True)
+    if empty(d):
+        again = get(empty(d), False)
+        ok = [t for t in empty(d) if t not in empty(again)]
+        if ok:
+            d = d.combine_first(again.loc[:, again.columns.get_level_values(1).isin(ok)])
+    return drop_partial(d)   # 美股收盘前 Yahoo 会把当天盘中价当一根日线
 
 
 def prices(tickers, start):
@@ -48,38 +73,69 @@ def prices(tickers, start):
         if set(tickers) <= set(px.columns) and px.index.min() <= pd.Timestamp(start):
             return drop_partial(px), False
     try:
-        if not os.environ.get("CI"):
-            os.environ.setdefault("https_proxy", "http://127.0.0.1:15236")
-        import yfinance as yf
-        def get(ts, threads):
-            p = yf.download(ts, start=str(start), auto_adjust=True, progress=False, threads=threads)["Close"]
-            p.index = pd.to_datetime(p.index).tz_localize(None).normalize()
-            return p.reindex(columns=ts)
-        empty = lambda p: [t for t in p if p[t].notna().sum() <= 20]
-        px = get(tickers, True)
-        # 并发拉 500 只时 Yahoo 会随机把一部分打回空（TypeError 'NoneType'，每次名单不同），单线程补一遍
-        if empty(px):
-            again = get(empty(px), False)
-            for t in empty(again):
-                again.pop(t)
-            px = px.combine_first(again) if len(again.columns) else px
+        px = download(tickers, start)["Close"].reindex(columns=tickers)
+        thin = lambda: [t for t in px if px[t].notna().sum() <= 20]
         # 还是空的沿用缓存里这只的旧价，不拿空列覆盖
-        if empty(px) and os.path.exists(PX):
+        if thin() and os.path.exists(PX):
             old = pd.read_csv(PX, index_col=0, parse_dates=True)
-            keep = [t for t in empty(px) if t in old and old[t].notna().sum() > 20]
+            keep = [t for t in thin() if t in old and old[t].notna().sum() > 20]
             if keep:
                 px[keep] = old[keep].reindex(px.index)
                 print(f"early: {len(keep)} 只下载为空，沿用缓存旧价：{keep}", file=sys.stderr)
-        if empty(px):
-            print(f"early: {len(empty(px))} 只没有股价：{empty(px)}", file=sys.stderr)
+        if thin():
+            print(f"early: {len(thin())} 只没有股价：{thin()}", file=sys.stderr)
         if px.notna().sum().gt(20).sum() < 0.8 * len(tickers):   # 被限流时常常大半是空列
             raise RuntimeError(f"只拿到 {px.notna().sum().gt(20).sum()}/{len(tickers)} 只")
-        px = drop_partial(px)   # 美股收盘前 Yahoo 会把当天盘中价当一根日线
         px.to_csv(PX)
         return px, True
     except Exception as e:
         print(f"early: 股价下载失败，用缓存：{e}", file=sys.stderr)
         return (drop_partial(pd.read_csv(PX, index_col=0, parse_dates=True)), False) if os.path.exists(PX) else (None, False)
+
+
+def record_px(log):
+    """逐日股价 early_px.csv（进 git，给以后积累够了做长期分析）：入选过的股票从第一次入选前最后一个收盘（分组用的就是它）起，
+    每个交易日一行——close 收盘（未按分红复权）、ret 当日收益（复权，含分红；复权因子事后会变，但相邻两天的比值不变，记下的不会过时）。
+    基准 SPY（含分红，和个股同口径）、^GSPC（价格指数，页面跟踪用它）从最早一次入选起记。
+    只往后追加、不改旧行：成分股被收购、退市后 Yahoo 常常查不到历史股价，留在这里的就是全部。
+    每只从自己最后一行往后补，漏跑的日子下次补上（最多往回 60 天）。"""
+    if log.empty:
+        return
+    old = pd.read_csv(PXLOG, dtype=str) if os.path.exists(PXLOG) else pd.DataFrame(columns=PXCOLS)
+    last = old.groupby("ticker").date.max().to_dict()
+    first = log.groupby("ticker").date.min().to_dict()
+    first.update({b: min(first.values()) for b in BENCH})
+    tickers = sorted(first)
+    start = max(min(pd.Timestamp(last.get(t, first[t])) for t in tickers) - pd.Timedelta(days=10),
+                pd.Timestamp.now().normalize() - pd.Timedelta(days=60))
+    try:
+        d = download(tickers, start.date(), adjust=False)
+        close, adj = d["Close"], d["Adj Close"]
+    except Exception as e:
+        print(f"early: 逐日股价下载失败，这次不记（下次补上）：{e}", file=sys.stderr)
+        return
+    ret = adj / adj.shift(1) - 1
+    new = []
+    for t in tickers:
+        c = close[t].dropna() if t in close else pd.Series(dtype=float)
+        if t in last:
+            c = c[c.index > pd.Timestamp(last[t])]
+        else:
+            before = c[c.index < pd.Timestamp(first[t])]
+            c = c[c.index >= (before.index[-1] if len(before) else pd.Timestamp(first[t]))]
+        new += [{"date": str(day.date()), "ticker": t, "close": round(float(v), 4),
+                 "ret": "" if pd.isna(ret[t].get(day)) else round(float(ret[t].get(day)), 6)} for day, v in c.items()]
+    miss = [t for t in tickers if t not in last and not any(r["ticker"] == t for r in new)]
+    if miss:
+        print(f"early: 逐日股价 {len(miss)} 只还没有数据（下次再试）：{miss}", file=sys.stderr)
+    if not new:
+        return
+    rows = sorted(old.to_dict("records") + new, key=lambda r: (r["date"], r["ticker"]))
+    with open(PXLOG, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=PXCOLS)
+        w.writeheader()
+        w.writerows(rows)
+    print(f"early: 逐日股价 +{len(new)} 行（{len({r['ticker'] for r in new})} 只）→ early_px.csv")
 
 
 def _close_before(p, d):
@@ -187,6 +243,7 @@ def page_data():
     if px is not None and (os.environ.get("CI") == "true" or os.environ.get("REV_RECORD") == "1"):
         record(day, s)
         log = pd.read_csv(LOG)
+        record_px(log)
     first = log.groupby("ticker").date.min().to_dict() if len(log) else {}
     pc = lambda v: None if pd.isna(v) else round(100 * float(v), 2)
     lst = [{"ticker": r.ticker, "group": r.group, "rank": int(r["rank"]), "sector": r.sector, "r30": pc(r.r30), "r_pre": pc(r.r_pre),
