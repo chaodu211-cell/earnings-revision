@@ -186,7 +186,9 @@ h1::before { content: ""; width: 10px; height: 22px; border-radius: 4px; backgro
 .tile.earn::before { background: var(--earn); } .tile.val::before { background: var(--val); }
 .tile .k { color: var(--ink-2); font-size: 12px; font-weight: 500; }
 .tile .v { font-size: 26px; font-weight: 700; line-height: 1.25; margin: 4px 0 3px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.tile.up .v { color: var(--pos); } .tile.dn .v { color: var(--neg); }
+.tile.warn::before { background: var(--warn); }
+.tile.up .v { color: var(--pos); } .tile.dn .v { color: var(--neg); } .tile.warn .v { color: var(--warn); }
+.tile .v small { font-size: 14px; font-weight: 600; margin-left: 8px; letter-spacing: 0; }
 .tile .n { color: var(--ink-3); font-size: 12px; line-height: 1.45; }
 .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
 .grp { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 12px; }
@@ -354,9 +356,31 @@ function before(arr, t) {
 }
 const pxAt = t => { const i = before(PX[state.idx], t); return i >= 0 ? PX[state.idx][i][1] : null; };
 
+// 上修结构（Yahoo 成分股快照）：集中在头部还是扩散——卡片和「上修广度」结论共用
+// 程度：前 10 大贡献的上修金额占比 ÷ 盈利占比（近 90 天）；方向：其余公司近 30 天修正比之前两个 30 天的均值低 / 高 0.3 个百分点以上
+function brView() {
+  const B = D.breadth;
+  if (!B || !B.latest) return null;
+  const L = B.latest, W = L.win, d = W[2].rest - (W[0].rest + W[1].rest) / 2;
+  const ratio = L.share10 == null ? null : L.share10 / L.w10;
+  return { L, W, ratio, level: ratio == null ? "down" : ratio >= 1.5 ? "top" : ratio <= 0.67 ? "small" : "even",
+           trend: d <= -0.3 ? "narrow" : d >= 0.3 ? "wide" : "flat" };
+}
+function brTile() {
+  const V = brView();
+  if (!V) return null;
+  const { L, W } = V, f = v => fmt(v, 1), pc = v => Math.round(v) + "%";
+  const head = { top: "集中头部", even: "大小同步", small: "扩散", down: "整体下修" }[V.level];
+  const tr = { narrow: ["收窄中", "--warn"], wide: ["在扩散", "--earn"], flat: ["持平", "--ink-3"] }[V.trend];
+  const n = V.level === "down" ? `近 90 天全指数 ${f(L.all)}，前 10 大 ${f(L.top10)}、其余 ${f(L.rest)}`
+    : `前 10 大占盈利 ${pc(L.w10)}、贡献 ${pc(L.share10)} 上修（${V.ratio.toFixed(1)} 倍）`;
+  return [`上修结构：扩散还是集中头部`, `${head}<small style="color:${css(tr[1])}">${tr[0]}</small>`,
+          `${n}；其余公司每 30 天 ${W.map(w => f(w.rest)).join(" → ")}（Yahoo ${L.date.slice(5)}）`,
+          { top: "warn", even: "up", small: "earn", down: "dn" }[V.level]];
+}
+
 function tiles() {
-  const L = D.latest, p = PX[state.idx], last = p[p.length - 1], cur = S().current;
-  const i13 = before(p, last[0] - 91 * 864e5), ch13 = 100 * (last[1] / p[i13][1] - 1);
+  const cur = S().current;
   let li = WK.length - 1; while (li > 0 && WK[li][XI()] == null) li--;
   const lx = WK[li][XI()], a = WK[li][AC()], xs = WK.map(r => r[XI()]).filter(v => v != null);
   const pct = Math.round(100 * xs.filter(v => v < lx).length / xs.length);
@@ -367,8 +391,9 @@ function tiles() {
     [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）", tone(a)],
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`,
       cur.phase.startsWith("上修") ? "up" : cur.phase.startsWith("下修") ? "dn" : ""],
-    [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`, tone(ch13)],
   ];
+  const bt = brTile();
+  if (bt) t.push(bt);
   const dc = lastDecomp();
   if (dc) t.push([`标普500 13 周涨跌拆分（${day(dc.t)} 周报）`, `<span style="color:${css(dc.earn ? "--earn" : "--val")}">${dc.kind}</span>`,
                   `涨跌 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)} + 估值 ${fmt(dc.v)}`, dc.earn ? "earn" : "val"]);
@@ -707,18 +732,17 @@ function brRender() {
   const B = D.breadth, box = $("#breadth");
   if (!B || !B.latest) { box.style.display = "none"; return; }
   box.style.display = "";
-  const L = B.latest, f = v => fmt(v, 1), pc = v => v == null ? "—" : Math.round(v) + "%";
+  const f = v => fmt(v, 1), pc = v => v == null ? "—" : Math.round(v) + "%";
+  const V = brView(), L = V.L, W = V.W;
   let verdict;
-  if (L.share10 == null) verdict = `<b>整体在下修</b>：近 90 天全指数 ${f(L.all)}，前 10 大 ${f(L.top10)}，其余 ${f(L.rest)}。`;
+  if (V.level === "down") verdict = `<b>整体在下修</b>：近 90 天全指数 ${f(L.all)}，前 10 大 ${f(L.top10)}，其余 ${f(L.rest)}。`;
   else {
-    const ratio = L.share10 / L.w10;
-    const head = ratio >= 1.5 ? "偏集中在大公司" : ratio <= 0.67 ? "中小公司上修更多" : "大小公司同步上修";
-    verdict = `<b>${head}</b>：市值前 10 大占指数盈利 ${pc(L.w10)}，贡献了 ${pc(L.share10)} 的上修金额（${ratio.toFixed(1)} 倍）；`
+    const head = { top: "偏集中在大公司", small: "中小公司上修更多", even: "大小公司同步上修" }[V.level];
+    verdict = `<b>${head}</b>：市值前 10 大占指数盈利 ${pc(L.w10)}，贡献了 ${pc(L.share10)} 的上修金额（${V.ratio.toFixed(1)} 倍）；`
       + `其余 ${L.n - 10} 家${L.rest > 0 ? "也在上修" : "在下修"} ${f(L.rest)}，${pc(L.up)} 的公司上修超过 1%、${pc(L.dn)} 下修超过 1%。`;
   }
-  const W = L.win, prev = (W[0].rest + W[1].rest) / 2, d = W[2].rest - prev;
   verdict += `<br>最近 30 天其余公司 ${f(W[2].rest)}，之前两个 30 天 ${f(W[0].rest)}、${f(W[1].rest)}——`
-    + (d <= -0.3 ? "<b>广度在收窄</b>（上修越来越靠大公司）。" : d >= 0.3 ? "<b>广度在变宽</b>。" : "大致持平。")
+    + { narrow: "<b>广度在收窄</b>（上修越来越靠大公司）。", wide: "<b>广度在变宽</b>。", flat: "大致持平。" }[V.trend]
     + ` 上修前 5：${L.lead.map(x => x.co).join("、")}，合计占 ${pc(L.lead5_share)}。`;
   $("#br-verdict").innerHTML = verdict;
   $("#br-sub").textContent = `Yahoo 成分股快照 ${L.date}，${L.n} 家公司；全指数近 90 天纯修正 ${f(L.all)}（和中图同一口径）。前 10 大：${L.top10_names.join(" ")}。`;
