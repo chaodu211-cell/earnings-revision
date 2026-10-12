@@ -134,73 +134,112 @@ TEMPLATE = r"""<!doctype html>
 <style>
 :root {
   color-scheme: light;
-  --surface: #fcfcfb; --surface-2: #f3f2ee; --border: #e6e5e0;
-  --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8984;
-  --pos: #2a78d6; --neg: #eb6834; --price: #3d3c39; --band: rgba(42,120,214,0.10);
-  --earn: #1a9a74; --val: #8a63d2;
+  --bg: #f3f5f9; --surface: #ffffff; --surface-2: #f1f4f8; --border: #e2e7ee; --grid: #edf0f5;
+  --ink: #0f172a; --ink-2: #475569; --ink-3: #8a96a8;
+  --pos: #2563eb; --neg: #ef6327; --price: #1e293b; --band: rgba(37,99,235,0.10);
+  --earn: #0e9f77; --val: #8b5cf6; --warn: #d97706;
+  --shadow: 0 1px 2px rgba(15,23,42,0.04), 0 6px 20px rgba(15,23,42,0.05);
+  --glow: rgba(37,99,235,0.07);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --surface: #1a1a19; --surface-2: #242422; --border: #34332f;
-    --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8f8e86;
-    --pos: #3987e5; --neg: #d95926; --price: #e4e3dc; --band: rgba(57,135,229,0.16);
-    --earn: #35bf95; --val: #a586ea;
+    --bg: #0a0f1c; --surface: #111827; --surface-2: #1a2334; --border: #243047; --grid: #1b2537;
+    --ink: #f1f5f9; --ink-2: #b4c0d3; --ink-3: #7a879d;
+    --pos: #4b8df8; --neg: #f5793f; --price: #e2e8f0; --band: rgba(75,141,248,0.18);
+    --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);
+    --glow: rgba(75,141,248,0.10);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface: #1a1a19; --surface-2: #242422; --border: #34332f;
-  --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #8f8e86;
-  --pos: #3987e5; --neg: #d95926; --price: #e4e3dc; --band: rgba(57,135,229,0.16);
-  --earn: #35bf95; --val: #a586ea;
+  --bg: #0a0f1c; --surface: #111827; --surface-2: #1a2334; --border: #243047; --grid: #1b2537;
+  --ink: #f1f5f9; --ink-2: #b4c0d3; --ink-3: #7a879d;
+  --pos: #4b8df8; --neg: #f5793f; --price: #e2e8f0; --band: rgba(75,141,248,0.18);
+  --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524;
+  --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);
+  --glow: rgba(75,141,248,0.10);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--surface); color: var(--ink);
-  font: 14px/1.5 -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 28px; }
-h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+body { margin: 0; color: var(--ink); background: var(--bg);
+  background-image: radial-gradient(1100px 420px at 12% -120px, var(--glow), transparent 70%);
+  background-repeat: no-repeat;
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 26px 20px 40px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 16px; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 16px; }
+h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.01em; margin: 0; display: flex; align-items: center; gap: 10px; }
+h1::before { content: ""; width: 10px; height: 22px; border-radius: 4px; background: linear-gradient(180deg, var(--pos), var(--val)); }
 .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 14px; }
 .fresh { color: var(--ink-3); font-size: 12px; margin: -8px 0 12px; }
-.fresh.stale { color: var(--ink); background: var(--surface-2); border-left: 3px solid var(--neg); padding: 8px 12px; border-radius: 6px; margin: 0 0 14px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
-.tile .k { color: var(--ink-2); font-size: 12px; }
-.tile .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.tile .n { color: var(--ink-3); font-size: 12px; }
-.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 6px; }
-.grp { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12px; }
-.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.seg button { background: transparent; color: var(--ink-2); border: 0; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+#fresh { margin: 0; display: inline-block; padding: 4px 12px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); }
+#fresh::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--earn); margin-right: 7px; vertical-align: 1px; }
+#fresh.stale { color: var(--ink); background: rgba(217,119,6,0.10); border-color: rgba(217,119,6,0.35); border-radius: 10px; padding: 6px 12px; }
+#fresh.stale::before { background: var(--warn); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 13px 15px 12px; position: relative; overflow: hidden; }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--border); }
+.tile.up::before { background: var(--pos); } .tile.dn::before { background: var(--neg); }
+.tile.earn::before { background: var(--earn); } .tile.val::before { background: var(--val); }
+.tile .k { color: var(--ink-2); font-size: 12px; font-weight: 500; }
+.tile .v { font-size: 26px; font-weight: 700; line-height: 1.25; margin: 4px 0 3px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tile.up .v { color: var(--pos); } .tile.dn .v { color: var(--neg); }
+.tile .n { color: var(--ink-3); font-size: 12px; line-height: 1.45; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
+.grp { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 12px; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.seg button { background: transparent; color: var(--ink-2); border: 0; border-radius: 7px; padding: 4px 11px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+.seg button:hover { color: var(--ink); }
 .grp { flex-wrap: wrap; }
-.seg button + button { border-left: 1px solid var(--border); }
-.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin: 4px 0 0; min-height: 18px; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--pos); font-weight: 600; box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 0 0 1px var(--border); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--ink-2); margin: 12px 0 0; padding-top: 12px; border-top: 1px dashed var(--border); min-height: 18px; }
 .legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .legend .mk { font-style: normal; font-size: 11px; margin-right: 4px; }
-#chart { width: 100%; height: 1000px; }
+#chart { width: 100%; height: 1000px; margin-top: 6px; }
 .muted { color: var(--ink-3); }
-h2 { font-size: 17px; font-weight: 600; margin: 26px 0 4px; }
-h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; color: var(--ink-2); }
-.br-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px 22px; margin-top: 10px; }
+.up { color: var(--pos); } .dn { color: var(--neg); }
+h2 { font-size: 17px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 9px; }
+h2::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--pos); }
+#early h2::before { background: var(--earn); }
+h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
+.br-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin-top: 14px; }
 .br-grid > div { min-width: 0; }
-.tbl-wrap { overflow-x: auto; }
+.br-grid > div:last-child { grid-column: 1 / -1; }
+@media (max-width: 860px) { .br-grid { grid-template-columns: minmax(0, 1fr); } }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
-th, td { padding: 5px 7px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
-th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th { color: var(--ink-2); font-weight: 500; font-size: 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+tr:hover td { background: var(--surface-2); }
 th:first-child, td:first-child { text-align: left; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
 #brchart { width: 100%; height: 250px; }
-.note { color: var(--ink-2); font-size: 13px; background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { color: var(--ink-2); font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--pos); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b { color: var(--ink); }
+#ea-sum { border-left-color: var(--earn); }
 .note p { margin: 4px 0; }
-@media (max-width: 640px) { #chart { height: 880px; } .tile .v { font-size: 19px; } }
+@media (max-width: 640px) {
+  .wrap { padding: 18px 12px 28px; }
+  .card { padding: 12px 12px; border-radius: 12px; }
+  #chart { height: 880px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tile { padding: 11px 12px 10px; } .tile .v { font-size: 20px; } .tile .n { font-size: 11px; }
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>修正速度与纳指</h1>
-  <p class="fresh" id="fresh"></p>
+  <div class="head">
+    <h1>修正速度与纳指</h1>
+    <p class="fresh" id="fresh"></p>
+  </div>
   <div class="tiles" id="tiles"></div>
 
+  <div class="card">
   <div class="bar">
     <span class="grp">数据口径
       <span class="seg" id="src">
@@ -241,8 +280,9 @@ th:first-child, td:first-child { text-align: left; }
   <div class="note" id="markinfo" style="display:none"></div>
 
   <div id="chart"></div>
+  </div>
 
-  <section id="breadth" style="display:none">
+  <section class="card" id="breadth" style="display:none">
     <h2>上修广度：集中在大公司还是全市场</h2>
     <div class="note" id="br-verdict"></div>
     <p class="fresh" id="br-sub" style="margin:4px 0 0"></p>
@@ -254,7 +294,7 @@ th:first-child, td:first-child { text-align: left; }
     </div>
   </section>
 
-  <section id="early" style="display:none">
+  <section class="card" id="early" style="display:none">
     <h2>上修初期名单（前瞻跟踪）</h2>
     <div class="note" id="ea-sum"></div>
     <p class="fresh" id="ea-rule" style="margin:4px 0 10px"></p>
@@ -272,6 +312,10 @@ const D = /*DATA*/;
 const $ = s => document.querySelector(s);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (v, d = 1) => v == null ? "—" : (v > 0 ? "+" : "") + Number(v).toFixed(d) + "%";
+const tone = v => v == null ? "" : v > 0 ? "up" : v < 0 ? "dn" : "";
+const sfmt = (v, d = 1) => `<span class="${tone(v == null ? v : +Number(v).toFixed(d))}">${fmt(v, d)}</span>`;   // 带正负色的百分数（表格用）
+const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+const TIP = "border-radius:10px;padding:9px 12px;box-shadow:0 8px 24px rgba(15,23,42,0.14);";
 const day = t => new Date(t).toISOString().slice(0, 10);
 const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, marks: "swing", ticks: [] };
 const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
@@ -319,15 +363,16 @@ function tiles() {
   const pend = state.src === "rt" && WK[WK.length - 1][FLAG] && !WK[WK.length - 1][FLAG].includes("；");
   const t = [
     ["纯修正（速度）", fmt(lx), `${day(WK[li][0])} 周报，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")
-      + (YD.length ? `；Yahoo 日度 ${day(YD[YD.length - 1][0]).slice(5)}：${fmt(YD[YD.length - 1][1])}` : "")],
-    [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）"],
-    [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`],
-    [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`],
+      + (YD.length ? `；Yahoo 日度 ${day(YD[YD.length - 1][0]).slice(5)}：${fmt(YD[YD.length - 1][1])}` : ""), tone(lx)],
+    [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）", tone(a)],
+    [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`,
+      cur.phase.startsWith("上修") ? "up" : cur.phase.startsWith("下修") ? "dn" : ""],
+    [`${NAME[state.idx]} 13 周涨跌`, fmt(ch13), `${day(last[0])} 收 ${last[1].toLocaleString()}`, tone(ch13)],
   ];
   const dc = lastDecomp();
   if (dc) t.push([`标普500 13 周涨跌拆分（${day(dc.t)} 周报）`, `<span style="color:${css(dc.earn ? "--earn" : "--val")}">${dc.kind}</span>`,
-                  `涨跌 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)} + 估值 ${fmt(dc.v)}`]);
-  $("#tiles").innerHTML = t.map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
+                  `涨跌 ${fmt(dc.p)} = 盈利 ${fmt(dc.e)} + 估值 ${fmt(dc.v)}`, dc.earn ? "earn" : "val"]);
+  $("#tiles").innerHTML = t.map(([k, v, n, c]) => `<div class="tile ${c}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
 }
 
 function legend() {
@@ -473,7 +518,7 @@ function bars(col, pos, neg) {
 }
 
 function option() {
-  const ink = css("--ink"), ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border");
+  const ink = css("--ink"), ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), grid = css("--grid");
   const pos = css("--pos"), neg = css("--neg");
   const name = NAME[state.idx];
   const M = markSets();
@@ -482,11 +527,11 @@ function option() {
   // 事后高 / 低点同时标在「速度」那张图上，能直接看到是纯修正的峰 / 谷
   const sTop = M && M.piv ? M.piv : M && state.marks === "ex" ? [...M.up, ...M.dn].map(p => [p.t, p.x13]) : [];
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
-    axisLabel: { color: ink2, fontSize: 11 }, splitLine: { lineStyle: { color: border } } };
+    axisLabel: { color: ink3, fontSize: 11 }, splitLine: { lineStyle: { color: grid } } };
   const G = [{ top: 50, height: "34.5%" }, { top: "46%", height: "12%" }, { top: "64.5%", height: "12%" }, { top: "83%", height: "10%" }]
     .map(g => ({ left: 64, right: 24, ...g }));
   const xa = i => ({ type: "time", gridIndex: i, min: X0, max: X1, ...ax, splitLine: { show: false },
-    axisLabel: i < 3 ? { show: false } : { color: ink2, fontSize: 11 } });
+    axisLabel: i < 3 ? { show: false } : { color: ink3, fontSize: 11 } });
   // 涨跌拆分：2020 年 ±30% 会把全图压扁，纵轴同样截在 95 分位附近
   const earn = css("--earn"), val = css("--val");
   const DC = WK.map(r => [r[0], decomp(r)]);
@@ -495,12 +540,12 @@ function option() {
   const dcNow = lastDecomp();
   const pctAxis = (i, cap) => ({ type: "value", gridIndex: i, ...ax, splitNumber: 3,
     ...(cap ? { min: v => Math.max(Math.floor(v.min), -cap), max: v => Math.min(Math.ceil(v.max), cap) } : {}),
-    axisLabel: { color: ink2, fontSize: 11, formatter: v => v + "%" } });
+    axisLabel: { color: ink3, fontSize: 11, formatter: v => v + "%" } });
   // 二阶导全图会被 2020 年的 ±20~30% 尖峰压扁：纵轴截在 95 分位附近（放大到局部时按可见数据自适应）
   const av = WK.map(r => r[AC()]).filter(v => v != null).map(Math.abs).sort((a, b) => a - b);
   const cap = Math.ceil(av[Math.floor(av.length * 0.95)] / 2) * 2;
   const line = (y, dash) => ({ yAxis: y, lineStyle: { color: ink3, width: 1, type: dash ? "dashed" : "solid" } });
-  const label = (text, top) => ({ text, left: 64, top, textStyle: { color: ink2, fontSize: 12, fontWeight: 500 } });
+  const label = (text, top) => ({ text, left: 64, top, textStyle: { color: ink, fontSize: 12, fontWeight: 600 } });
   const mark = (data, down, color) => ({ name: down ? "mark-up" : "mark-dn", type: "scatter", xAxisIndex: 0, yAxisIndex: 0, data,
     symbol: "triangle", symbolRotate: down ? 180 : 0, symbolSize: 12, symbolOffset: [0, down ? -11 : 11], z: 5, tooltip: { show: false },
     cursor: "pointer", emphasis: { scale: 1.5 },
@@ -511,16 +556,16 @@ function option() {
     title: [label(name, 4), label("纯修正（速度，%：13 周里分析师真正改了多少，已扣掉时间往前滚的部分）", "43%"),
             label(`二阶导：纯修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "61.5%"),
             { text: `标普500 13 周涨跌拆分（对数 %）：{e|■} 盈利（远期 EPS）  {v|■} 估值（远期市盈率）  — 线 = 指数涨跌（全图纵轴截在 ±${capD}%）`, left: 64, top: "80%",
-              textStyle: { color: ink2, fontSize: 12, fontWeight: 500, rich: { e: { color: earn, fontSize: 12 }, v: { color: val, fontSize: 12 } } } },
+              textStyle: { color: ink, fontSize: 12, fontWeight: 600, rich: { e: { color: earn, fontSize: 12 }, v: { color: val, fontSize: 12 } } } },
             ...(dcNow ? [{ text: `当前：{k|${dcNow.kind}}`, subtext: `标普 13 周 ${fmt(dcNow.p)} = 盈利 ${fmt(dcNow.e)} + 估值 ${fmt(dcNow.v)}`,
               right: 28, top: 4, itemGap: 2,
-              textStyle: { color: ink2, fontSize: 13, fontWeight: 500, rich: { k: { color: dcNow.earn ? earn : val, fontSize: 15, fontWeight: 700 } } },
+              textStyle: { color: ink2, fontSize: 13, fontWeight: 500, rich: { k: { color: dcNow.earn ? earn : val, fontSize: 16, fontWeight: 700 } } },
               subtextStyle: { color: ink3, fontSize: 11 } }] : [])],
     grid: G,
     axisPointer: { link: [{ xAxisIndex: "all" }], label: { backgroundColor: ink2 } },
     tooltip: {
-      trigger: "axis", axisPointer: { type: "line", lineStyle: { color: ink3 } },
-      backgroundColor: css("--surface"), borderColor: border, textStyle: { color: ink, fontSize: 12 },
+      trigger: "axis", axisPointer: { type: "line", lineStyle: { color: ink3, type: "dashed" } },
+      backgroundColor: css("--surface"), borderColor: border, textStyle: { color: ink, fontSize: 12 }, extraCssText: TIP,
       formatter: ps => {
         const t = ps[0].axisValue, iw = before(WK, t), px = pxAt(t);
         let h = `<b>${day(t)}</b><br>${name}：${px != null ? px.toLocaleString() : "—"}`;
@@ -552,7 +597,7 @@ function option() {
       { type: state.scale, gridIndex: 0, scale: true, ...ax,
         min: v => state.scale === "log" ? v.min * 0.96 : v.min - (v.max - v.min) * 0.04,
         max: v => state.scale === "log" ? v.max * 1.03 : v.max + (v.max - v.min) * 0.03,
-        axisLabel: { color: ink2, fontSize: 11, showMinLabel: state.scale === "log", showMaxLabel: state.scale === "log",
+        axisLabel: { color: ink3, fontSize: 11, showMinLabel: state.scale === "log", showMaxLabel: state.scale === "log",
                      customValues: state.scale === "log" ? state.ticks : undefined,
                      formatter: v => Math.round(v).toLocaleString() },
         axisTick: { show: false, customValues: state.scale === "log" ? state.ticks : undefined } },
@@ -560,14 +605,18 @@ function option() {
     ],
     dataZoom: [
       { type: "inside", xAxisIndex: [0, 1, 2, 3], filterMode: "filter" },
-      { type: "slider", xAxisIndex: [0, 1, 2, 3], bottom: 6, height: 20, filterMode: "filter",
-        borderColor: border, fillerColor: css("--band"), handleStyle: { color: css("--surface"), borderColor: ink3 },
-        textStyle: { color: ink2 }, dataBackground: { lineStyle: { color: ink3 }, areaStyle: { color: border } },
+      { type: "slider", xAxisIndex: [0, 1, 2, 3], bottom: 6, height: 22, filterMode: "filter",
+        borderColor: border, borderRadius: 6, backgroundColor: "transparent", fillerColor: css("--band"),
+        handleStyle: { color: css("--surface"), borderColor: pos }, moveHandleStyle: { color: alpha(pos, 0.35) },
+        emphasis: { handleStyle: { borderColor: pos }, moveHandleStyle: { color: pos } },
+        textStyle: { color: ink2 }, dataBackground: { lineStyle: { color: ink3, opacity: 0.6 }, areaStyle: { color: grid, opacity: 1 } },
+        selectedDataBackground: { lineStyle: { color: pos }, areaStyle: { color: alpha(pos, 0.15) } },
         labelFormatter: v => day(v).slice(0, 7) },
     ],
     series: [
       { name, type: "line", xAxisIndex: 0, yAxisIndex: 0, data: PX[state.idx], showSymbol: false,
-        lineStyle: { width: 1.6, color: css("--price") }, itemStyle: { color: css("--price") } },
+        lineStyle: { width: 1.6, color: css("--price") }, itemStyle: { color: css("--price") },
+        areaStyle: { origin: "start", color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(pos, 0.16) }, { offset: 1, color: alpha(pos, 0) }]) } },
       mark(mUp, true, pos),
       mark(mDn, false, neg),
       { type: "scatter", xAxisIndex: 1, yAxisIndex: 1, data: sTop, symbol: "circle", symbolSize: 8, z: 5, tooltip: { show: false },
@@ -675,29 +724,29 @@ function brRender() {
   $("#br-sub").textContent = `Yahoo 成分股快照 ${L.date}，${L.n} 家公司；全指数近 90 天纯修正 ${f(L.all)}（和中图同一口径）。前 10 大：${L.top10_names.join(" ")}。`;
   $("#br-top-h").textContent = `${L.lead_dir}前 5 的公司（按贡献的${L.lead_dir}金额）`;
   $("#br-top").innerHTML = `<tr><th>公司</th><th>市值排名</th><th>行业</th><th>90 天修正</th><th>占全部${L.lead_dir}金额</th></tr>`
-    + L.lead.map(x => `<tr><td><b>${x.co}</b></td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${f(x.rev)}</td><td>${pc(x.share)}</td></tr>`).join("")
+    + L.lead.map(x => `<tr><td><b>${x.co}</b></td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${sfmt(x.rev)}</td><td>${pc(x.share)}</td></tr>`).join("")
     + `<tr><td class="muted">合计</td><td></td><td></td><td></td><td class="muted">${pc(L.lead5_share)}</td></tr>`;
   $("#br-size").innerHTML = `<tr><th>市值排名</th><th>占指数盈利</th><th>修正</th><th>中位数</th><th>上修>1%</th><th>占上修金额</th></tr>`
-    + L.size.map(x => `<tr><td>${x.name}</td><td>${pc(x.w)}</td><td>${f(x.rev)}</td><td>${f(x.med)}</td><td>${pc(x.up)}</td><td>${pc(x.share)}</td></tr>`).join("");
+    + L.size.map(x => `<tr><td>${x.name}</td><td>${pc(x.w)}</td><td>${sfmt(x.rev)}</td><td>${sfmt(x.med)}</td><td>${pc(x.up)}</td><td>${pc(x.share)}</td></tr>`).join("");
   // 广度走势：前 10 大 / 其余公司的近 30 天修正（左轴），全部公司净广度（灰柱，右轴）
   const T = B.trend, el = $("#brchart");
   brchart = brchart || echarts.init(el, null, { renderer: "canvas" });
-  const ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), xs = T.map(t => tsOf(t.date));
+  const ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), grid = css("--grid"), xs = T.map(t => tsOf(t.date));
   const ser = (k) => T.map((t, i) => [xs[i], t[k]]);
   brchart.setOption({
     animation: false, backgroundColor: "transparent",
     grid: { left: 44, right: 44, top: 34, bottom: 26 },
     legend: { top: 0, left: 0, itemWidth: 14, itemHeight: 8, textStyle: { color: ink2, fontSize: 11 } },
-    tooltip: { trigger: "axis", backgroundColor: css("--surface"), borderColor: border, textStyle: { color: css("--ink"), fontSize: 12 },
+    tooltip: { trigger: "axis", backgroundColor: css("--surface"), borderColor: border, textStyle: { color: css("--ink"), fontSize: 12 }, extraCssText: TIP,
       formatter: ps => `截至 ${day(ps[0].axisValue)} 的近 30 天<br>` + ps.map(q => `${q.marker}${q.seriesName}：<b>${q.seriesName.startsWith("净广度") ? (q.value[1] > 0 ? "+" : "") + Math.round(q.value[1]) + " 个百分点" : fmt(q.value[1], 2)}</b>`).join("<br>") },
-    xAxis: { type: "time", splitNumber: 3, axisLabel: { color: ink2, fontSize: 11, hideOverlap: true, formatter: v => day(v).slice(5) },
-             axisLine: { lineStyle: { color: border } }, splitLine: { show: false } },
-    yAxis: [{ type: "value", axisLabel: { color: ink2, fontSize: 11, formatter: v => v + "%" }, splitLine: { lineStyle: { color: border } } },
+    xAxis: { type: "time", splitNumber: 3, axisLabel: { color: ink3, fontSize: 11, hideOverlap: true, formatter: v => day(v).slice(5) },
+             axisLine: { lineStyle: { color: border } }, axisTick: { show: false }, splitLine: { show: false } },
+    yAxis: [{ type: "value", axisLabel: { color: ink3, fontSize: 11, formatter: v => v + "%" }, splitLine: { lineStyle: { color: grid } } },
             { type: "value", axisLabel: { color: ink3, fontSize: 11 }, splitLine: { show: false } }],
     series: [
-      { name: "净广度（右轴）", type: "bar", yAxisIndex: 1, barWidth: 10, data: ser("net"), itemStyle: { color: ink3, opacity: 0.45 } },
-      { name: "前 10 大", type: "line", data: ser("top10"), symbolSize: 5, lineStyle: { width: 2, color: css("--pos") }, itemStyle: { color: css("--pos") } },
-      { name: "其余公司", type: "line", data: ser("rest"), symbolSize: 5, lineStyle: { width: 2, color: css("--earn") }, itemStyle: { color: css("--earn") } },
+      { name: "净广度（右轴）", type: "bar", yAxisIndex: 1, barWidth: 10, data: ser("net"), itemStyle: { color: ink3, opacity: 0.3, borderRadius: [3, 3, 0, 0] } },
+      { name: "前 10 大", type: "line", data: ser("top10"), symbol: "circle", symbolSize: 6, lineStyle: { width: 2.2, color: css("--pos") }, itemStyle: { color: css("--pos"), borderColor: css("--surface"), borderWidth: 1.5 } },
+      { name: "其余公司", type: "line", data: ser("rest"), symbol: "circle", symbolSize: 6, lineStyle: { width: 2.2, color: css("--earn") }, itemStyle: { color: css("--earn"), borderColor: css("--surface"), borderWidth: 1.5 } },
     ],
   }, true);
   $("#br-trendnote").textContent = `线 = 近 30 天修正；灰柱 = 净广度：近 30 天修正 > +0.5% 的公司占比 − < −0.5% 的占比（全部 ${L.n} 家）。`
@@ -711,7 +760,7 @@ function eaRender() {
   box.style.display = "";
   const f = v => fmt(v, 1), R = E.rule, S = E.summary;
   const gc = g => g === "双确认" ? css("--earn") : g === "股价未动" ? css("--val") : css("--ink-3");
-  const tag = g => g ? `<span style="color:${gc(g)};font-weight:600">${g}</span>` : `<span class="muted">—</span>`;
+  const tag = g => g ? `<span class="tag" style="color:${gc(g)};background:${alpha(gc(g), 0.12)}">${g}</span>` : `<span class="muted">—</span>`;
   const cnt = g => E.list.filter(x => x.group === g).length;
   let sum = `快照 ${E.date}：${E.n_screened} 家里 <b>${E.list.length} 家</b>符合（${tag("双确认")} ${cnt("双确认")} 家、${tag("股价未动")} ${cnt("股价未动")} 家）。`;
   if (!E.price_ok) sum += "（股价没下载到，今天分不了组。）";
@@ -726,12 +775,12 @@ function eaRender() {
     + `每个交易日按最新快照筛一次并记下；入选后从下一个收盘算起，对照 SPY（含分红，和个股同口径）。`;
   $("#ea-list-h").textContent = `今天的名单（快照 ${E.date}）`;
   $("#ea-list").innerHTML = `<tr><th>公司</th><th>分组</th><th>市值排名</th><th>行业</th><th>近 30 天上修</th><th>之前 60 天</th><th>上调 / 下调</th><th>近 7 天上调</th><th>股价 30 天</th><th>股价 90 天</th><th>首次入选</th></tr>`
-    + (E.list.length ? E.list.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${f(x.r30)}</td><td>${f(x.r_pre)}</td>`
-        + `<td>${x.up} / ${x.dn}</td><td>${x.up7}</td><td>${f(x.p30)}</td><td>${f(x.p90)}</td><td>${x.first}</td></tr>`).join("")
+    + (E.list.length ? E.list.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${sfmt(x.r30)}</td><td>${sfmt(x.r_pre)}</td>`
+        + `<td>${x.up} / ${x.dn}</td><td>${x.up7}</td><td>${sfmt(x.p30)}</td><td>${sfmt(x.p90)}</td><td>${x.first}</td></tr>`).join("")
        : `<tr><td class="muted" colspan="11">今天没有符合条件的公司</td></tr>`);
   $("#ea-track").innerHTML = `<tr><th>公司</th><th>分组</th><th>首次入选</th><th>上榜次数</th><th>最近一次</th><th>建仓（收盘）</th><th>入选后</th><th>同期 SPY</th><th>超额</th><th>交易日</th></tr>`
     + (E.track.length ? E.track.map(x => `<tr><td><b>${x.ticker}</b></td><td>${tag(x.group)}</td><td>${x.first}</td><td>${x.times}</td><td>${x.last}</td>`
-        + (x.entry ? `<td>${x.entry}</td><td>${f(x.ret)}</td><td>${f(x.spx)}</td><td><b>${f(x.ex)}</b></td><td>${x.days}</td>`
+        + (x.entry ? `<td>${x.entry}</td><td>${sfmt(x.ret)}</td><td>${sfmt(x.spx)}</td><td><b>${sfmt(x.ex)}</b></td><td>${x.days}</td>`
                    : `<td class="muted" colspan="5">等下一个收盘建仓</td>`) + `</tr>`).join("")
        : `<tr><td class="muted" colspan="10">还没有记录</td></tr>`);
 }
