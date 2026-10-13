@@ -6,7 +6,8 @@
 口径和页面中图的纯修正一致：个股远期 EPS = 本财年 × w + 下一财年 × (1 − w)，w 按快照当天定、回看时不变，所以不含时间滚动。
   盈利额 = 股本 × 远期 EPS；修正 = Σ盈利额(今天) / Σ盈利额(N 天前) − 1
   双重股权合并成一家公司（GOOG→GOOGL、FOX→FOXA、NWS→NWSA）；Yahoo 两个代码给的市值都是全公司的，所以市值用 股本 × 股价
-  「前 10 大」按市值；「上修前 5」按贡献的上修金额（股本 × 远期 EPS 的 90 天变化）
+  「前 10 大」按市值；「上修前 5」按贡献的上修金额（股本 × 远期 EPS 的 N 天变化）
+  上修前 5 和按市值分组各算近 30 / 60 / 90 天三套（by），页面上切换；顶层同名字段 = 90 天那套
 
 广度走势：每个点 = 截至那天的近 30 天（前 10 大 / 其余公司的修正、全部公司的净广度）。最早那份快照还能算出 60、30 天前那两段，
   之后每份快照添一个点（当天往前 30 天）。净广度 = 修正 > +0.5% 的公司占比 − < −0.5% 的占比（百分点）。
@@ -24,6 +25,7 @@ SECTORS = os.environ.get("REV_SECTORS") or os.path.join(os.path.dirname(BASE), "
 CO = {"GOOG": "GOOGL", "FOX": "FOXA", "NWS": "NWSA"}
 LAGS = ("current", "30daysAgo", "60daysAgo", "90daysAgo")
 SIZE = [(1, 10, "前 10"), (11, 50, "11–50"), (51, 100, "51–100"), (101, 250, "101–250"), (251, 9999, "251 以后")]
+MAG7 = ("AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA")   # 按市值分组前另列一行，和「前 10」重叠
 
 
 def _load(path, ends=None):
@@ -85,8 +87,33 @@ def _rev(g, m, a="E_90daysAgo", b="E_current"):
     return float((g.loc[m, b].sum() - base) / base) if base > 0 else None
 
 
+def _p(v):
+    return None if v is None or (isinstance(v, float) and np.isnan(v)) else round(100 * float(v), 2)
+
+
+def horizon(g, n):
+    """近 n 天（n = 30 / 60 / 90）：上修前 5（整体净下修时改列下修前 5）、按市值分组。权重、修正都以 n 天前的盈利额为基。"""
+    p, a = _p, f"E_{n}daysAgo"
+    dE = g.E_current - g[a]
+    rev = pd.Series(np.where(g[a] > 0, g.E_current / g[a] - 1, np.nan), index=g.index)
+    tot = dE.sum()
+    up = tot > 0
+    lead = dE.sort_values(ascending=not up).head(5).index
+    out = {"lead_dir": "上修" if up else "下修",
+           "lead": [{"co": g.co[i], "rank": int(g["rank"][i]), "sector": g.sector[i], "rev": p(rev[i]), "share": p(dE[i] / tot) if tot else None}
+                    for i in lead],
+           "lead5_share": p(dE[lead].sum() / tot) if tot else None, "size": []}
+    groups = [("Mag 7", g.co.isin(MAG7))] + [(name, g["rank"].between(lo, hi)) for lo, hi, name in SIZE]
+    for name, m in groups:
+        rr = rev[m].dropna()
+        out["size"].append({"name": name, "w": p(g.loc[m, a].sum() / g[a].sum()), "rev": p(_rev(g, m, a)),
+                            "med": p(rr.median()), "up": p((rr > 0.01).mean()), "share": p(dE[m].sum() / tot) if tot else None,
+                            **({"n": int(m.sum())} if name == "Mag 7" else {})})
+    return out
+
+
 def summarize(day, g):
-    p = lambda v: None if v is None or (isinstance(v, float) and np.isnan(v)) else round(100 * float(v), 2)
+    p = _p
     tot, top = g.dE.sum(), g["rank"] <= 10
     r = g.rev.dropna()
     out = {"date": str(day), "n": int(len(g)),
@@ -95,19 +122,8 @@ def summarize(day, g):
            "share10": p(g.loc[top, "dE"].sum() / tot) if tot > 0 else None,
            "up": p((r > 0.01).mean()), "dn": p((r < -0.01).mean()), "med": p(r.median()),
            "top10_names": list(g.loc[top, "co"])}
-    # 上修前 5（整体净下修时改列下修前 5）
-    up = tot > 0
-    lead = g.sort_values("dE", ascending=not up).head(5)
-    out["lead_dir"] = "上修" if up else "下修"
-    out["lead"] = [{"co": c, "rank": int(k), "sector": s, "rev": p(v), "share": p(e / tot) if tot else None}
-                   for c, k, s, v, e in zip(lead.co, lead["rank"], lead.sector, lead.rev, lead.dE)]
-    out["lead5_share"] = p(lead.dE.sum() / tot) if tot else None
-    out["size"] = []
-    for a, b, name in SIZE:
-        m = g["rank"].between(a, b)
-        rr = g.loc[m, "rev"].dropna()
-        out["size"].append({"name": name, "w": p(g.loc[m, "E_90daysAgo"].sum() / g.E_90daysAgo.sum()), "rev": p(_rev(g, m)),
-                            "med": p(rr.median()), "up": p((rr > 0.01).mean()), "share": p(g.loc[m, "dE"].sum() / tot) if tot else None})
+    out["by"] = {str(n): horizon(g, n) for n in (30, 60, 90)}
+    out.update(out["by"]["90"])   # 顶层 lead / size 照旧是 90 天，给读页面数据的每日任务用
     out["win"] = []
     for a, b, name in (("E_90daysAgo", "E_60daysAgo", "90→60 天前"), ("E_60daysAgo", "E_30daysAgo", "60→30 天前"),
                        ("E_30daysAgo", "E_current", "近 30 天")):
