@@ -3,7 +3,7 @@
 """
 生成 修正速度与纳指.html：
   上半：纳指（综合 / 纳斯达克100）+ 纯修正（速度）+ 纯修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
-        纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），2016-04 起；
+        纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），增长率只用当周及以前记录，当前2016-12起；
         纳指上标出速度见顶的红蓝三角（点击看详情）；最下面一张把标普500 13 周涨跌拆成 盈利（远期 EPS）+ 估值（远期市盈率），
         右上角写当前是盈利抬升还是估值抬升。
   再下：上修初期名单（early.py）——近 30 天刚开始上修、分析师一致上调的公司，按股价分「双确认 / 股价未动」两组，每天记录、分组跟踪。
@@ -15,7 +15,7 @@
 它的变化就是 EPS 的加速度：正 = 上修在加快（或下修在变缓），负 = 上修在减速（或下修在加剧）。
 
 先跑 analyze.py（生成 _weekly_signals.csv、_analysis.json），再跑本脚本：
-    python3 make_chart.py            # 纳指日线超过 1 天没更新会重新拉 Yahoo（走代理 15236）
+    python3 make_chart.py            # 纳指缓存超过 3 小时会重新拉 Yahoo；启动脚本每次强制刷新
 """
 import json, os, sys, time
 import numpy as np
@@ -29,31 +29,57 @@ import speed
 BASE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE, "修正速度与纳指.html")
 NS = (4, 8, 13)
+NASDAQ_STATUS = {}
 
 
-def nasdaq():
+def nasdaq(force=False):
     path = os.path.join(BASE, "_nasdaq.csv")
     # 缓存 3 小时内有效；REV_FORCE_FETCH=1（GitHub Actions）时每次重下，下载失败才退回缓存
     fresh = (os.path.exists(path) and time.time() - os.path.getmtime(path) < 3 * 3600
-             and not os.environ.get("REV_FORCE_FETCH"))
+             and not force and not os.environ.get("REV_FORCE_FETCH"))
+    NASDAQ_STATUS.clear()
+    NASDAQ_STATUS["state"] = "cached" if fresh else "downloaded"
+    if fresh and os.environ.get("REV_NASDAQ_FALLBACK") == "1":
+        NASDAQ_STATUS["state"] = "fallback"  # 启动脚本前一步强制刷新失败，不能被缓存命中掩盖
     if not fresh:
         if not os.environ.get("CI"):  # 本地走 Veee；GitHub Actions 上直连
             os.environ.setdefault("https_proxy", "http://127.0.0.1:15236")
         try:
             import yfinance as yf
             cols = {}
+            old = (drop_partial(pd.read_csv(path, index_col=0, parse_dates=True))
+                   if os.path.exists(path) else None)
             for s in ("^IXIC", "^NDX"):
-                h = yf.Ticker(s).history(start="2011-01-01", auto_adjust=False)["Close"]
-                if len(h) < 2000:  # 被限流时 yfinance 常返回空表而不报错，不能拿它覆盖缓存
-                    raise RuntimeError(f"{s} 只拿到 {len(h)} 行")
-                h.index = h.index.tz_localize(None).normalize()
+                for attempt in range(2):
+                    try:
+                        h = yf.Ticker(s).history(start="2011-01-01", auto_adjust=False, timeout=15)["Close"].dropna()
+                        h.index = h.index.tz_localize(None).normalize()
+                        h = drop_partial(h)
+                        if len(h) < 2000:  # 被限流时常返回空表，不能拿它覆盖缓存
+                            raise RuntimeError(f"{s} 只拿到 {len(h)} 行")
+                        if old is not None and s in old and h.index.max() < old[s].dropna().index.max():
+                            raise RuntimeError(f"{s} 下载的数据比缓存更旧")
+                        break
+                    except Exception:
+                        if attempt == 1:
+                            raise
+                        print(f"PRICE_RETRY {s} 下载失败，重试一次", file=sys.stderr)
+                        time.sleep(1)
                 cols[s] = h
-            pd.DataFrame(cols).to_csv(path)
+            # 两只都成功才原子替换；失败不破坏已有缓存。
+            pd.DataFrame(cols).to_csv(path + ".tmp")
+            os.replace(path + ".tmp", path)
         except Exception as e:
+            if os.path.exists(path + ".tmp"):
+                os.remove(path + ".tmp")
             if not os.path.exists(path):
                 raise
+            NASDAQ_STATUS.update(state="fallback", error=str(e))
             print(f"PRICE_FALLBACK 纳指下载失败，改用缓存 _nasdaq.csv：{e}", file=sys.stderr)
-    return drop_partial(pd.read_csv(path, index_col=0, parse_dates=True))
+    nq = drop_partial(pd.read_csv(path, index_col=0, parse_dates=True))
+    dates = "；".join(f"{s} 截至 {nq[s].dropna().index.max():%Y-%m-%d}" for s in ("^IXIC", "^NDX"))
+    print(f"PRICE_STATUS {NASDAQ_STATUS['state']} {dates}")
+    return nq
 
 
 HS = (0.0, 0.5, 1.0, 1.5, 2.0)  # 0 = 不去噪：状态翻转就是二阶导穿过 0 的那一周
@@ -92,7 +118,7 @@ def main():
     pct = lambda v: None if pd.isna(v) else round(100 * float(v), 2)
     rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True).reindex(wk.index)
     # 每行：日期, x13（纯修正）, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
-    #       | 扣掉的时间滚动 roll13, 明年增速预期, 明年增速是否事后补（两种口径共用）
+    #       | 扣掉的时间滚动 roll13, 截至当周已记录的明年增速, 历史回填兼容位（现恒为0）
     #       | 标普500 13 周涨跌（对数，周五收盘）, 实时口径的远期 EPS 13 周变化 —— 涨跌拆成 盈利 + 估值 用
     #       | 实时口径的事后值 x13_final（笔误作废、停刊周插值后）, FactSet 这周有没有周报 —— 实时口径没有读数的周画空心柱用
     weekly = [[d.strftime("%Y-%m-%d"), pct(r.x13), pct(r.r13), round(r.eps, 2)] + [pct(r[f"a{n}"]) for n in NS]
@@ -117,7 +143,10 @@ def main():
     fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
     data["fresh"] = {"generated": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
                      "factset": fw.date.max().strftime("%Y-%m-%d"),
-                     "nasdaq": nq["^IXIC"].dropna().index.max().strftime("%Y-%m-%d")}
+                     "nasdaq": nq["^IXIC"].dropna().index.max().strftime("%Y-%m-%d"),
+                     "nasdaq_fetch": NASDAQ_STATUS["state"]}
+    data["method"] = {"growth_history": "recorded_asof_forward_only",
+                      "growth_backfill": False, "changed": "2026-10-19"}
 
     echarts = open(os.path.join(BASE, "vendor", "echarts.min.js")).read()
     html = TEMPLATE.replace("/*ECHARTS*/", echarts).replace("/*DATA*/", json.dumps(data, separators=(",", ":")))
@@ -420,6 +449,7 @@ function legend() {
   if (YD.length) h += `<span><b class="mk" style="color:${css("--ink")}">●—</b>Yahoo 日度（中图，${day(YD[0][0])} 起每个交易日一点；FactSet 周报每年停刊 5~8 周，停刊 / 待核实时看它）</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink-2")}">▯</b>空心柱 = 当时没有新读数的周（FactSet 停刊 / 待核实），画事后补的值，不进信号</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%：有当周 Yahoo 快照就当场判真假，判不了才等下一期）</span>`;
+  h += `<span class="muted">两种口径的增长率均只沿用截至当周已有的记录，不向历史回填</span>`;
   $("#legend").innerHTML = h;
   swingNote();
 }
@@ -616,7 +646,7 @@ function option() {
              + `<br>远期EPS：${w[3]}`
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
              + (x == null && state.src === "rt" ? "" : `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`)
-             + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按明年增速预期 ${w[13].toFixed(1)}%${w[14] ? "，当年周报还没写、用之后的说法补" : ""}）</span>` : "");
+             + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[state.src === "rt" ? 16 : 2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按截至当周已记录的明年增速；本周 ${w[13].toFixed(1)}%，不向历史回填）</span>` : "");
           const yd = ydAt(t);
           if (yd) h += `<br><span style="color:${ink}">●</span> Yahoo 日度纯修正（${day(yd[0]).slice(5)}，90 天）：<b>${fmt(yd[1], 2)}</b>`;
           const dc = decomp(w);
@@ -874,11 +904,11 @@ chart.on("datazoom", () => {
 (function () {
   const F = D.fresh, today = Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
   const ago = d => Math.round((today - Date.parse(d + "T00:00:00Z")) / 864e5);
-  const a = ago(F.nasdaq), b = ago(F.factset), stale = a > 4 || b > 9;
+  const a = ago(F.nasdaq), b = ago(F.factset), failed = F.nasdaq_fetch === "fallback", stale = failed || a > 4 || b > 9;
   const el = $("#fresh");
   el.className = "fresh" + (stale ? " stale" : "");
-  el.innerHTML = (stale ? "⚠ 数据可能不是最新：" : "数据：")
-    + `纳指截至 ${F.nasdaq}（${a} 天前），FactSet 周报截至 ${F.factset}（${b} 天前）；页面生成于 ${F.generated}。`
+  el.innerHTML = (failed ? "⚠ 本次纳指下载失败，沿用缓存：" : stale ? "⚠ 数据可能不是最新：" : "数据：")
+    + `纳指收盘截至 ${F.nasdaq}（${a} 天前），FactSet 周报截至 ${F.factset}（${b} 天前）；页面生成于 ${F.generated}。`
     + (stale ? "　双击 <b>盈利修正/更新修正页并打开.command</b> 刷新。" : "");
 })();
 

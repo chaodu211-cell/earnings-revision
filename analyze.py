@@ -6,7 +6,7 @@
 信号（每周，周报周五发布、数据截至周四收盘；按周五收盘进出）：
   r13   远期 12 个月 EPS 13 周对数变化（含「时间往前滚」的机械增长）
   x13   纯修正（2026-10-04 起页面主线）：r13 减去「预测一个数都不改时，远期 EPS 随时间往前滚自然涨的部分」（time_roll），
-        剩下的就是分析师真正改了多少。用周报里的明年 EPS 预期增速算（next_growth），2016 年以前周报基本没写 → 2016-04 起
+        用周报里截至当周已记录的明年 EPS 预期增速估计（next_growth），不向历史回填；当前记录的13周纯修正从2016-12起
   x13_excess  原来的「超额修正」：r13 减去它此前 3 年（156 周）的均值（baseline），2011-07 起；
         这个均值里除了时间滚动还混着过去 3 年的平均修正，上修多的年份会把它抬高（2026-09 达 4%），留作对照
   r4    4 周变化，同理 x4（纯修正）
@@ -77,29 +77,26 @@ def baseline(r):
     return b
 
 
-G_START = pd.Timestamp("2016-01-01")  # 2015 年周报全年没写明年增速，纯修正从 2016 起（13 周窗口 → 2016-04 才有值）
+G_START = pd.Timestamp("2016-01-01")  # 不沿用2011—2014零星旧值跨越2015缺失期；2016首条记录以前留空
 
 
 def next_growth(index):
-    """每周的「明年全年 EPS 预期增速」（小数），对齐到 index（周五网格）。返回 (g, 是否事后补)。
-    当年已说过 → 最近一次的说法；当年还没说过、但之后说了 → 用当年第一次的说法往前补（事后值）；
-    当年一直没有（只会出现在最新几周，新年刚开始）→ 沿用上一个已知值。"""
+    """截至当周已记录的明年全年EPS预期增速；周报映射到当周五后可用。
+
+    2026-10-19取消向年初回填，避免历史计算包含当时尚未记录到的信息。
+    缺报及跨年只沿用最近已有记录；首条合格记录之前留空。跨年沿用仍是
+    时间滚动扣除的近似，不代表预测目标年度未变。返回(g, 回填标志)，后者
+    保留兼容接口、恒为False；实时和清洗口径共同遵守这条增长率规则。
+    """
     d = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])[["date", "g_next"]].dropna()
+    d = d.loc[d.date.ge(G_START)].sort_values("date", kind="stable")
     d["date"] = d.date + pd.to_timedelta((4 - d.date.dt.weekday) % 7, unit="D")  # 周四出的算到当周五
     s = d.drop_duplicates("date", keep="last").set_index("date").g_next / 100
-    g = pd.Series(np.nan, index, dtype=float)
-    la = pd.Series(False, index)
-    for y in sorted(set(index.year)):
-        wk = index[index.year == y]
-        sy = s[s.index.year == y]
-        if sy.empty:
-            continue
-        v = sy.reindex(wk.union(sy.index)).ffill().reindex(wk)
-        la[wk[v.isna()]] = True
-        g[wk] = v.fillna(sy.iloc[0])
-    g = g.ffill()
+    # 并集保留查询索引未覆盖的已有记录；只向后续日期传播，不使用bfill。
+    g = s.reindex(s.index.union(index)).ffill().reindex(index)
+    g.name = None
     g[index < G_START] = np.nan
-    return g, la & g.notna()
+    return g, pd.Series(False, index=index, dtype=bool)
 
 
 def time_roll(index, g):

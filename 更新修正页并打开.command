@@ -73,7 +73,7 @@ echo "③ 抓新周报（只抓本地还没有的；FactSet 限流时会自动�
 NEW="$("$PY" fetch_factset.py --new 2>&1 | grep -E " hub|Traceback|Error")"
 if [ -n "$NEW" ]; then echo "$NEW" | sed 's/^/   /'; else echo "   没有新周报（本周的可能还没发布，下次双击会再试）"; fi
 
-# 纳指、标普缓存超过 3 小时就会在下面重算时自动重下
+# 每次双击都刷新纳指；必须在 speed.py 读缓存之前完成。
 
 # ---------- 重算 ----------
 echo
@@ -83,9 +83,16 @@ set -o pipefail
 echo "   周报解析完成（最新一期 $(tail -1 factset_weekly.csv | cut -d, -f1)）"
 "$PY" analyze.py >/dev/null 2>>run_err.log              || die "analyze.py 失败：$(tail -3 run_err.log)"
 "$PY" realtime.py 2>>run_err.log | tail -1 | sed 's/^/   实时口径：/' || die "realtime.py 失败：$(tail -3 run_err.log)"
+"$PY" -c 'import make_chart; make_chart.nasdaq(force=True)' 2>>run_err.log | tail -1 | sed 's/^/   纳指行情：/' || die "纳指更新失败且没有可用缓存：$(tail -3 run_err.log)"
+NQ_FALLBACK=0
+if grep -q 'PRICE_FALLBACK 纳指' run_err.log; then NQ_FALLBACK=1; fi
 "$PY" speed.py >/dev/null 2>>run_err.log                || die "speed.py 失败：$(tail -3 run_err.log)"
-"$PY" make_chart.py 2>>run_err.log | grep html | sed 's/^/   生成：/' || die "make_chart.py 失败：$(tail -3 run_err.log)"
+REV_NASDAQ_FALLBACK="$NQ_FALLBACK" "$PY" make_chart.py 2>>run_err.log | grep html | sed 's/^/   生成：/' || die "make_chart.py 失败：$(tail -3 run_err.log)"
 set +o pipefail
+if grep -q PRICE_FALLBACK run_err.log; then
+  echo "   ⚠️  行情下载有失败，本次使用了缓存（截至日期见页面顶部）："
+  grep PRICE_FALLBACK run_err.log | sed 's/^/      /'
+fi
 
 # ---------- Yahoo 成分股快照：每天一次，历史从 2026-10-02 起靠它积累 ----------
 echo
@@ -104,6 +111,10 @@ echo
 echo "⑥ 打开网页"
 [ "$NO_OPEN" = "1" ] || open 修正速度与纳指.html || die "打不开，手动双击同目录的 修正速度与纳指.html"
 echo
-echo "✅ 完成。此窗口可以关掉了。"
+if grep -q PRICE_FALLBACK run_err.log; then
+  echo "⚠️  页面已生成，但行情更新有失败，请留意页面的数据截至日。此窗口可以关掉了。"
+else
+  echo "✅ 完成。此窗口可以关掉了。"
+fi
 read -n 1 -s -r -t 15 -p "按任意键关闭（15 秒后自动关闭）…"
 echo
