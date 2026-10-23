@@ -17,13 +17,15 @@
 每周两套值：
   x13 / a{n}             当周实际能算出的；待核实的周和没有数据的周不更新（空值，阶段维持上周）——画标记、算阶段用这个
   eps_final / x13_final  核实后的值（笔误作废、缺周事后插值）——只用来算之后各周的「N 周前」和滚动均值
+  x13_ex / x13_ex_final  超额修正（13 周变化 − 此前 3 年均值，analyze.baseline），2011-07 起；纯修正 2016-12 才有，
+                         页面在那之前接这条（2026-10-23 加，与纯修正上线之前 0648eb9 版的实时口径 x13 同一算法）
 用法：python3 realtime.py
 """
 import math, os
 import numpy as np
 import pandas as pd
 
-from analyze import next_growth, time_roll
+from analyze import baseline, next_growth, time_roll
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 JUMP, CARRY = 0.02, 3   # 待核实阈值、缺周最多插值几周
@@ -105,6 +107,9 @@ def signals(w):
     w["x13"] = w.r13 - roll13                                   # 纯修正
     for n in NS:
         w[f"a{n}"] = w.x13 - w.x13_final.shift(n)                # 当周值 − N 周前（已核实）
+    mean = baseline(r13f)                                       # 2013-07 之前用第一个 3 年均值往前补（事后值）
+    w["x13_ex_final"] = r13f - mean
+    w["x13_ex"] = w.r13 - mean
     return w
 
 

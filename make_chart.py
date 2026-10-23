@@ -4,6 +4,7 @@
 生成 修正速度与纳指.html：
   上半：纳指（综合 / 纳斯达克100）+ 纯修正（速度）+ 纯修正的二阶导（加速度），三图共用时间轴、缩放、十字线联动；
         纯修正 = 远期 EPS 13 周变化 − 预测不动时随时间自然涨的部分（analyze.time_roll），增长率只用当周及以前记录，当前2016-12起；
+        2016-12 以前接超额修正（13 周变化 − 此前 3 年均值，2011-07 起，浅色柱），大波段两段各自起算、不跨接缝（2026-10-23）；
         纳指上标出速度见顶的红蓝三角（点击看详情）；最下面一张把标普500 13 周涨跌拆成 盈利（远期 EPS）+ 估值（远期市盈率），
         右上角写当前是盈利抬升还是估值抬升。
   再下：上修初期名单（early.py）——近 30 天刚开始上修、分析师一致上调的公司，按股价分「双确认 / 股价未动」两组，每天记录、分组跟踪。
@@ -109,24 +110,41 @@ def speed_data(weeks):
 def main():
     w = pd.read_csv(os.path.join(BASE, "_weekly_signals.csv"), index_col=0, parse_dates=True)
     nq = nasdaq()
+    # 拼接（2026-10-23）：纯修正要用「明年全年 EPS 增速」，2016 年以前的周报几乎不写，只能从 2016-12 算起；
+    # 在那之前接超额修正（13 周变化 − 此前 3 年均值，2011-07 起；2013-07 以前的基准是事后值）。
+    # 大波段在拼起来的整条序列上连续算；二阶导两段各自差分，不跨接缝。spliced 列标出接上去的周，页面画浅色。
+    p0 = w.x13.first_valid_index()
+    cut = w.index < p0
+    a_pure = {n: w.x13.diff(n) for n in NS}  # 在完整周网格上差分，缺周处自然是空值
+    a_ex = {n: w.x13_excess.diff(n) for n in NS}
+    w["spliced"] = cut & w.x13_excess.notna()
+    w.loc[cut, "x13"] = w.loc[cut, "x13_excess"]
     for n in NS:
-        w[f"a{n}"] = w.x13.diff(n)  # 在完整周网格上差分，缺周处自然是空值
+        w[f"a{n}"] = a_ex[n].where(cut, a_pure[n])
 
     wk = w[w.x13.notna()]
     fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
     issued = set(fw.date + pd.to_timedelta((4 - fw.date.dt.weekday) % 7, unit="D"))   # 周报落款日对到周五网格
     pct = lambda v: None if pd.isna(v) else round(100 * float(v), 2)
-    rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True).reindex(wk.index)
+    rt = pd.read_csv(os.path.join(BASE, "_weekly_rt.csv"), index_col=0, parse_dates=True)
+    cr = rt.index < p0                              # 实时口径同样接上超额修正（realtime.py 的 x13_ex / x13_ex_final）
+    a_rt = {n: rt.x13_ex - rt.x13_ex_final.shift(n) for n in NS}
+    rt.loc[cr, "x13"], rt.loc[cr, "x13_final"] = rt.loc[cr, "x13_ex"], rt.loc[cr, "x13_ex_final"]
+    for n in NS:
+        rt.loc[cr, f"a{n}"] = a_rt[n][cr]
+    rt = rt.reindex(wk.index)
     # 每行：日期, x13（纯修正）, r13, eps, a4, a8, a13（清洗口径） | x13, a4, a8, a13（实时口径）, 待核实提示
     #       | 扣掉的时间滚动 roll13, 截至当周已记录的明年增速, 历史回填兼容位（现恒为0）
     #       | 标普500 13 周涨跌（对数，周五收盘）, 实时口径的远期 EPS 13 周变化 —— 涨跌拆成 盈利 + 估值 用
     #       | 实时口径的事后值 x13_final（笔误作废、停刊周插值后）, FactSet 这周有没有周报 —— 实时口径没有读数的周画空心柱用
+    #       | 这周是不是接上去的超额修正（2016-12 以前）
     weekly = [[d.strftime("%Y-%m-%d"), pct(r.x13), pct(r.r13), round(r.eps, 2)] + [pct(r[f"a{n}"]) for n in NS]
               + [pct(rt.x13[d])] + [pct(rt[f"a{n}"][d]) for n in NS]
               + [rt.flag[d] if isinstance(rt.flag[d], str) else None]
               + [pct(r.roll13), pct(r.g_next), 1 if r.g_next_la else 0]
               + [pct(r.p13), pct(rt.r13[d])]
               + [pct(rt.x13_final[d]), 1 if d in issued else 0]
+              + [1 if r.spliced else 0]
               for d, r in wk.iterrows()]
 
     px = {k: [[d.strftime("%Y-%m-%d"), round(float(v), 2)] for d, v in nq[k].dropna().items()]
@@ -134,7 +152,7 @@ def main():
     last = wk.iloc[-1]
     data = {"weekly": weekly, "px": px,
             "latest": {"date": wk.index[-1].strftime("%Y-%m-%d"), "x13": pct(last.x13),
-                       "pctile": round(100 * float((wk.x13 < last.x13).mean())), "r13": pct(last.r13),
+                       "pctile": round(100 * float((wk.x13[~wk.spliced] < last.x13).mean())), "r13": pct(last.r13),
                        "eps": round(float(last.eps), 2), **{f"a{n}": pct(last[f"a{n}"]) for n in NS}}}
 
     data["speed"] = speed_data(wk.index)
@@ -432,7 +450,7 @@ function readingChange(current, previous) {
 function tiles() {
   const cur = S().current;
   let li = WK.length - 1; while (li > 0 && WK[li][XI()] == null) li--;
-  const lx = WK[li][XI()], a = WK[li][AC()], xs = WK.map(r => r[XI()]).filter(v => v != null);
+  const lx = WK[li][XI()], a = WK[li][AC()], xs = PURE.map(r => r[XI()]).filter(v => v != null);
   const pct = Math.round(100 * xs.filter(v => v < lx).length / xs.length);
   const pend = state.src === "rt" && WK[WK.length - 1][FLAG] && !WK[WK.length - 1][FLAG].includes("；");
   // 上次读数按当前所选口径查找；停刊插值和空读数不作为实际周报读数。
@@ -441,7 +459,7 @@ function tiles() {
   const yahoo = YD.length ? YD[YD.length - 1] : null;
   const yahooChange = yahoo ? readingChange(yahoo, YD.length > 1 ? YD[YD.length - 2] : null) : "";
   const t = [
-    ["纯修正（速度）", fmt(lx), `${day(WK[li][0])} 周报，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")
+    ["纯修正（速度）", fmt(lx), `${day(WK[li][0])} 周报，${PURE[0][0] ? day(PURE[0][0]).slice(0, 4) : ""} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")
       + weeklyChange + (yahoo ? `<span class="reading-source">Yahoo 日度 ${day(yahoo[0]).slice(5)}：${fmt(yahoo[1])}</span>${yahooChange}` : ""), tone(lx)],
     [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）", tone(a)],
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`,
@@ -467,6 +485,7 @@ function legend() {
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink-2")}">▯</b>空心柱 = 当时没有新读数的周（FactSet 停刊 / 待核实），画事后补的值，不进信号</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%：有当周 Yahoo 快照就当场判真假，判不了才等下一期）</span>`;
   h += `<span class="muted">两种口径的增长率均只沿用截至当周已有的记录，不向历史回填</span>`;
+  if (SPL_END) h += `<span class="muted">2016-12 以前的浅色柱是超额修正（周报没写明年增速，纯修正算不出），大波段在接缝处重新起算（两段口径不同，不连着算）</span>`;
   $("#legend").innerHTML = h;
   swingNote();
 }
@@ -513,11 +532,22 @@ function swingNote() {
 // R 取 2：略高于单周噪声的 95% 分位（1.5 个百分点）；A 取 4：约一个标准差（4.4）。按噪声定，不按收益挑。
 // 只用当时已有的读数（待核实 / 缺周跳过）；确认那周就知道顶 / 底在哪周（回落前的极值）。
 const SW = { R: 2, A: 4, L: 2 };
+// 接缝处重新起算（2026-10-23）：2016-12 以前的超额修正和之后的纯修正各跑一遍折返，状态不跨接缝——
+// 两种口径在接缝处差 1.5 个百分点，连着算会凭空多出一个 2017-05-12 ▲。纯修正段的标记与拼接之前完全相同。
 function swings() {
+  const segs = [WK.filter(r => r[SPL]), PURE].filter(s => s.length);
+  let Z = null;
+  const out = [];
+  for (const rows of segs) { Z = zigzag(rows); out.push(...Z.out); }
+  return { tops: out.filter(e => e.type === "top" && e.p.v >= SW.L && e.amp >= SW.A),
+           bots: out.filter(e => e.type === "bot" && e.p.v <= -SW.L && e.amp >= SW.A),
+           all: out, mode: Z.mode, ext: Z.ext, last: Z.last, now: Z.now };
+}
+function zigzag(rows) {
   const col = XI(), out = [];
   let mode = null, ext = null, last = null, hi = null, lo = null, now = null;
-  for (let i = 0; i < WK.length; i++) {
-    const v = WK[i][col], t = WK[i][0];
+  for (let i = 0; i < rows.length; i++) {
+    const v = rows[i][col], t = rows[i][0];
     if (v == null) continue;
     const cur = { t, v };
     now = cur;
@@ -536,9 +566,7 @@ function swings() {
       else if (v >= ext.v + SW.R) { out.push({ type: "bot", p: ext, c: cur, amp: last - ext.v }); last = ext.v; mode = "up"; ext = cur; }
     }
   }
-  return { tops: out.filter(e => e.type === "top" && e.p.v >= SW.L && e.amp >= SW.A),
-           bots: out.filter(e => e.type === "bot" && e.p.v <= -SW.L && e.amp >= SW.A),
-           all: out, mode, ext, last, now };
+  return { out, mode, ext, last, now };
 }
 
 function markSets() {
@@ -579,7 +607,9 @@ const MARK_TXT = {
 const chart = echarts.init($("#chart"), null, { renderer: "canvas" });
 
 // 实时口径里当时没有新读数的周（FactSet 停刊 / 待核实 / 没写市盈率）：画事后补的值，空心柱，不进信号
-const XF = 17, ISSUED = 18;
+const XF = 17, ISSUED = 18, SPL = 19;   // SPL：2016-12 以前接上去的超额修正
+const PURE = WK.filter(r => !r[SPL]);
+const SPL_END = WK.some(r => r[SPL]) ? WK.filter(r => r[SPL]).pop()[0] : null;
 const FM = new Map(WK.map(r => [r[0], r[XF]]));
 function hollow(kind, pos, neg) {
   if (state.src !== "rt") return [];
@@ -595,7 +625,8 @@ function hollow(kind, pos, neg) {
   return out;
 }
 function bars(col, pos, neg) {
-  return WK.filter(r => r[col] != null).map(r => ({ value: [r[0], r[col]], itemStyle: { color: r[col] > 0 ? pos : neg } }));
+  return WK.filter(r => r[col] != null).map(r => ({ value: [r[0], r[col]],
+    itemStyle: { color: r[SPL] ? alpha(r[col] > 0 ? pos : neg, 0.4) : r[col] > 0 ? pos : neg } }));
 }
 
 function option() {
@@ -657,7 +688,9 @@ function option() {
           const why = w[FLAG] ? (voided ? "远期 EPS 单周变动 > 2%，判为笔误作废" : "远期 EPS 单周变动 > 2%，待核实") : !w[ISSUED] ? "FactSet 这周停刊" : "周报没写远期市盈率";
           h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${why}），信号维持上周；`
                 + `空心柱是事后补的值 ${fmt(w[XF], 2)}（${w[FLAG] && !voided ? "下一期核实后" : "前后两期插值"}）</span>` : "")
-             + `<br>${x == null ? "" : dot(x)} 纯修正：<b>${fmt(x, 2)}</b>`
+             + `<br>${x == null ? "" : dot(x)} ${w[SPL] ? "超额修正" : "纯修正"}：<b>${fmt(x, 2)}</b>`
+             + (w[SPL] ? `<br><span style="color:${ink3}">2016-12 以前纯修正算不出（周报没写明年增速），这里是超额修正：13 周变化 − 此前 3 年均值`
+                + (w[0] < Date.parse("2013-07-05") ? "；2013-07 以前的 3 年均值是事后补的" : "") + `</span>` : "")
              + `<br>${a == null ? "" : dot(a)} 二阶导（${state.win}周）：<b>${fmt(a, 2)}</b>`
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
              + `<br>远期EPS：${w[3]}`
@@ -709,7 +742,10 @@ function option() {
         lineStyle: { color: ink, width: 1.2 }, itemStyle: { color: ink }, data: YD },
       { name: "纯修正（事后值）", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, barGap: "-100%", data: hollow("x", pos, neg) },
       { name: "纯修正", type: "bar", xAxisIndex: 1, yAxisIndex: 1, barMaxWidth: 6, barGap: "-100%", data: bars(XI(), pos, neg),
-        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] } },
+        markLine: { silent: true, symbol: "none", label: { show: false }, data: [line(0)] },
+        markArea: SPL_END ? { silent: true, itemStyle: { color: css("--band") },
+          label: { show: true, position: "insideTopLeft", color: ink3, fontSize: 11, formatter: "超额修正口径（纯修正 2016-12 起）" },
+          data: [[{ xAxis: WK[0][0] }, { xAxis: SPL_END }]] } : undefined },
       { name: "二阶导（事后值）", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: hollow("a", pos, neg) },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },

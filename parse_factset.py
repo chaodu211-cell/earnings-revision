@@ -19,7 +19,7 @@
 用法：python3 parse_factset.py                 # 从 txt/ 全量重建
       python3 parse_factset.py --incremental   # 只追加 CSV 里还没有的周报（GitHub Actions 用）
 """
-import csv, glob, os, re
+import csv, glob, os, re, sys
 from datetime import date, datetime, timedelta
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -129,10 +129,25 @@ def qyear(qn, day):
 
 
 def gspc_thursday():
-    """Yahoo ^GSPC 收盘，按日期查；周报数据截至周四收盘。"""
-    import yfinance as yf
-    h = yf.Ticker("^GSPC").history(start="2011-01-01", auto_adjust=False)
-    return {d.date(): float(c) for d, c in zip(h.index, h["Close"])}
+    """^GSPC 收盘，按日期查；周报数据截至周四收盘。
+    先读 analyze.py 维护的缓存 _spx.csv（2008 起），再用 Yahoo 新下载的覆盖；Yahoo 失败（或被限流返回空表）时只用缓存。
+    2026-10-23 加：之前 Yahoo 一失败 px_yahoo 就整列留空，2012-10 以前的周报正文里又没有可解析的收盘价，
+    2011-04 ~ 2012-09 的远期 EPS 悄悄丢了 123 周（提交 71c5cef），超额修正只剩 2013-01 起。"""
+    px = {}
+    cache = os.path.join(BASE, "_spx.csv")
+    if os.path.exists(cache):
+        for r in csv.DictReader(open(cache)):
+            try:
+                px[date.fromisoformat(r["Date"][:10])] = float(r["close"])
+            except (KeyError, ValueError):
+                pass
+    try:
+        import yfinance as yf
+        h = yf.Ticker("^GSPC").history(start="2011-01-01", auto_adjust=False)
+        px.update({d.date(): float(c) for d, c in zip(h.index, h["Close"])})
+    except Exception as e:
+        print("Yahoo ^GSPC 拉取失败，只用缓存 _spx.csv：", e, file=sys.stderr)
+    return px
 
 
 def parse_one(path):
@@ -169,12 +184,10 @@ def main():
             if os.path.basename(p)[:10] not in known]
 
     # 周报没写收盘价的，用 ^GSPC 补：取周报日之前最近的周四（不含当天）往前找交易日
-    px = {}
-    if rows:
-        try:
-            px = gspc_thursday()
-        except Exception as e:
-            print("Yahoo ^GSPC 拉取失败：", e)
+    px = gspc_thursday() if rows else {}
+    if rows and not px:
+        # 宁可报错停下（.command 会提示），也不要把没有价格的周报写进 CSV
+        sys.exit("没有标普收盘价可用（Yahoo 失败且没有 _spx.csv 缓存），不写 factset_weekly.csv")
     for r in rows:
         day = datetime.strptime(r["date"], "%Y-%m-%d").date()
         d = day - timedelta(days=1)
