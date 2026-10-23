@@ -333,6 +333,10 @@ th:first-child, td:first-child { text-align: left; }
     </span>
   </div>
   <div class="legend" id="legend"></div>
+  <div class="note" id="readme">
+    <p>本模型的预警点（▼ / ▲）标的是分析师上调（下调）盈利预期的速度见顶，即分析师追加乐观（悲观）的力度达到了最大。此时预期仍在继续上调（下调），并不说明基本面已经转差（好转）。因此 ▼ 之后股价仍可能因估值扩张或盈利预期继续温和上调而上涨；▲ 之后也可能继续下跌。</p>
+    <p>此外，预警点存在滞后。修正本身落后于价格：消息和情绪即时反映在股价上，而分析师的预测调整是分散、分批完成的，更新时间不同，夹着尚未更新的旧预测逐渐过渡到一致预期，周报也是每周发布一次。</p>
+  </div>
   <div class="note" id="markinfo" style="display:none"></div>
 
   <div id="chart"></div>
