@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次行情下载成功的发布，
-  # 并且这次跑了也拍不了快照（main 上已有北京今天的 yahoo/ 文件，或者 ③ 的盘中闸门此刻会拦），就跳过。
+  # 并且这次跑了也拍不了快照（main 上已有北京今天的 yahoo/ 文件，或者快照步骤的盘中闸门此刻会拦），就跳过。
   # 不看 status.json 的 event / snapshot：晚上推一次代码，push 那次发布会把它们改成 push / skipped。
   # 代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
   check:
@@ -65,7 +65,7 @@ jobs:
           gen = datetime.strptime(st["generated"], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
           bj, et = now.astimezone(ZoneInfo("Asia/Shanghai")), now.astimezone(ZoneInfo("America/New_York"))
           snap_done = os.path.exists(f"yahoo/{bj:%Y-%m-%d}.csv")
-          # 与 ③ 的盘中闸门同一条件
+          # 与快照步骤的盘中闸门同一条件
           blocked = et.weekday() < 5 and 900 <= et.hour * 100 + et.minute < 1630 and bj.date() != et.date()
           skip = gen >= cutoff and bool(st.get("prices_ok")) and (snap_done or blocked)
           print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），行情 {st.get('prices_ok')}；"
@@ -111,14 +111,46 @@ jobs:
           restore-keys: |
             rev-
 
-      - name: ① 抓新周报
+      # 快照和页面共用同一份成分股名单；push 不拍快照，也需要它显示行业。
+      - name: 下载成分股名单与行业
+        run: |
+          if curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
+            https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json; then
+            echo "REV_SECTORS=$RUNNER_TEMP/sectors.json" >> "$GITHUB_ENV"
+          else
+            rm -f "$RUNNER_TEMP/sectors.json"
+            echo "::warning::sectors.json 下载失败，Yahoo 快照可能无法更新，上修广度表不显示行业"
+          fi
+
+      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30、且北京已经是第二天时不拍。快照按北京日期命名、每天只拍一次，
+      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，前一天盘中的数据记成了次日的快照，
+      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。北京日期与美东相同时（北京 21:00~24:00 手动补跑）照拍。
+      - name: ① Yahoo 成分股快照
+        id: snap
+        if: ${{ !cancelled() && github.event_name != 'push' }}   # 先拍快照，再计算当次页面；快照失败仍用历史数据重算
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
+          ET_DOW=$(TZ=America/New_York date +%u); ET_HM=$(TZ=America/New_York date +%H%M)
+          if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ] \
+             && [ "$(date +%F)" != "$(TZ=America/New_York date +%F)" ]; then
+            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中、北京已是 $(date +%F)，不拍（这天的快照留给北京 19:23 盘前那次）"
+            echo "guard=market_hours" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          timeout 20m python3 yahoo_snapshot.py 2>&1 | tee snap.log | tail -2
+
+      - name: ② 抓新周报
         id: fetch
         continue-on-error: true   # 抓不到就用已有的周报照样重算；是否被挡看 status.json 的 factset_http
         run: |
           set -o pipefail
           timeout 40m python3 fetch_factset.py --since-csv 2>&1 | tee fetch.log
 
-      - name: ② 重算并生成页面
+      - name: ③ 重算并生成页面
+        env:
+          REV_YAHOO_FETCH: ${{ steps.snap.outputs.guard || steps.snap.outcome }}
         run: |
           set -eo pipefail
           python3 parse_factset.py --incremental 2>&1 | tee build.log
@@ -127,10 +159,6 @@ jobs:
           # speed.py 直接读 _nasdaq.csv，先刷新
           python3 -c "import make_chart; make_chart.nasdaq()" 2>&1 | tee -a build.log | tail -3
           python3 speed.py 2>&1 | tee -a build.log | tail -1
-          # 上修广度表里的行业：取最优拟合仓库的 sectors.json（下载失败只是行业列留空）
-          curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
-            https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json \
-            && export REV_SECTORS="$RUNNER_TEMP/sectors.json" || echo "::warning::sectors.json 下载失败，上修广度表不显示行业"
           python3 make_chart.py 2>&1 | tee -a build.log | grep html
           grep -h PRICE_FALLBACK build.log | sed 's/^/::warning::/' || true
 
@@ -168,28 +196,6 @@ jobs:
                 f"（{d['latest']['pctile']}% 分位）　阶段 {cur['phase']}（自 {cur['since']} 起）")
           PY
 
-      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30、且北京已经是第二天时不拍。快照按北京日期命名、每天只拍一次，
-      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，前一天盘中的数据记成了次日的快照，
-      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。北京日期与美东相同时（北京 21:00~24:00 手动补跑）照拍。
-      - name: ③ Yahoo 成分股快照
-        id: snap
-        if: ${{ !cancelled() && github.event_name != 'push' }}   # 页面没算出来也照拍：快照历史补不回来
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
-          ET_DOW=$(TZ=America/New_York date +%u); ET_HM=$(TZ=America/New_York date +%H%M)
-          if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ] \
-             && [ "$(date +%F)" != "$(TZ=America/New_York date +%F)" ]; then
-            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中、北京已是 $(date +%F)，不拍（这天的快照留给北京 19:23 盘前那次）"
-            echo "guard=market_hours" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # 成分股名单和行业取最优拟合仓库那份（它的流水线会跟着指数调整更新）
-          curl -sS --fail --retry 3 -o "$RUNNER_TEMP/sectors.json" \
-            https://raw.githubusercontent.com/chaodu211-cell/best-weights/main/sectors.json
-          REV_SECTORS="$RUNNER_TEMP/sectors.json" timeout 20m python3 yahoo_snapshot.py 2>&1 | tee snap.log | tail -2
-
       - name: 准备 Pages 目录
         id: site
         env:
@@ -214,6 +220,7 @@ jobs:
           st = {"generated": d["fresh"]["generated"],
                 "factset": d["fresh"]["factset"],   # 最新一期周报落款日
                 "nasdaq": d["fresh"]["nasdaq"],     # 纳指最新收盘日
+                "yahoo": ((d.get("breadth") or {}).get("latest") or {}).get("date"),   # 实际用于页面的快照日期
                 "new_reports": re.findall(r"->\s+(\d{4}-\d{2}-\d{2}) hub", fl),   # 本次新抓到的周报
                 "factset_fetch_ok": os.environ["FETCH_OUTCOME"] == "success",
                 "factset_http": http,               # 404 = 还没发布；有 403/429/err 而没有 200 → 多半被挡

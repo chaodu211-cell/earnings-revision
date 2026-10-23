@@ -141,10 +141,12 @@ def main():
     data["breadth"] = breadth.breadth_data()   # 上修广度（Yahoo 成分股快照）
     data["early"] = early.page_data()          # 上修初期名单 + 前瞻跟踪（GitHub Actions 上顺带记录）
     fw = pd.read_csv(os.path.join(BASE, "factset_weekly.csv"), parse_dates=["date"])
-    data["fresh"] = {"generated": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
+    data["fresh"] = {"generated": pd.Timestamp.now(tz="Asia/Shanghai").strftime("%Y-%m-%d %H:%M"),
                      "factset": fw.date.max().strftime("%Y-%m-%d"),
                      "nasdaq": nq["^IXIC"].dropna().index.max().strftime("%Y-%m-%d"),
-                     "nasdaq_fetch": NASDAQ_STATUS["state"]}
+                     "nasdaq_fetch": NASDAQ_STATUS["state"],
+                     "yahoo": data["breadth"]["latest"]["date"] if data["breadth"] else None,
+                     "yahoo_fetch": os.environ.get("REV_YAHOO_FETCH", "not_requested")}
     data["method"] = {"growth_history": "recorded_asof_forward_only",
                       "growth_backfill": False, "changed": "2026-10-19"}
 
@@ -219,6 +221,10 @@ h1::before { content: ""; width: 10px; height: 22px; border-radius: 4px; backgro
 .tile.up .v { color: var(--pos); } .tile.dn .v { color: var(--neg); } .tile.warn .v { color: var(--warn); }
 .tile .v small { font-size: 14px; font-weight: 600; margin-left: 8px; letter-spacing: 0; }
 .tile .n { color: var(--ink-3); font-size: 12px; line-height: 1.45; }
+.tile .reading-change { display: block; margin-top: 3px; }
+.tile .reading-change b { font-weight: 600; white-space: nowrap; }
+.tile .reading-change .up { color: var(--pos); } .tile .reading-change .dn { color: var(--neg); }
+.tile .reading-source { display: block; margin-top: 8px; }
 .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
 .grp { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 12px; }
 .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
@@ -417,15 +423,26 @@ function brTile() {
           { top: "warn", even: "up", small: "earn", down: "dn" }[V.level]];
 }
 
+function readingChange(current, previous) {
+  if (!previous) return `<span class="reading-change">暂无上次有效读数</span>`;
+  const delta = Number((current[1] - previous[1]).toFixed(2));
+  return `<span class="reading-change">较上次（${day(previous[0]).slice(5)}）<b class="${tone(delta)}">${delta > 0 ? "+" : ""}${delta.toFixed(2)} 个百分点</b></span>`;
+}
+
 function tiles() {
   const cur = S().current;
   let li = WK.length - 1; while (li > 0 && WK[li][XI()] == null) li--;
   const lx = WK[li][XI()], a = WK[li][AC()], xs = WK.map(r => r[XI()]).filter(v => v != null);
   const pct = Math.round(100 * xs.filter(v => v < lx).length / xs.length);
   const pend = state.src === "rt" && WK[WK.length - 1][FLAG] && !WK[WK.length - 1][FLAG].includes("；");
+  // 上次读数按当前所选口径查找；停刊插值和空读数不作为实际周报读数。
+  const previous = WK.slice(0, li).reverse().find(r => r[XI()] != null && r[18] !== 0);
+  const weeklyChange = readingChange([WK[li][0], lx], previous ? [previous[0], previous[XI()]] : null);
+  const yahoo = YD.length ? YD[YD.length - 1] : null;
+  const yahooChange = yahoo ? readingChange(yahoo, YD.length > 1 ? YD[YD.length - 2] : null) : "";
   const t = [
     ["纯修正（速度）", fmt(lx), `${day(WK[li][0])} 周报，${D.weekly[0][0].slice(0, 4)} 年以来 ${pct}% 分位` + (pend ? `；最新一周待核实` : "")
-      + (YD.length ? `；Yahoo 日度 ${day(YD[YD.length - 1][0]).slice(5)}：${fmt(YD[YD.length - 1][1])}` : ""), tone(lx)],
+      + weeklyChange + (yahoo ? `<span class="reading-source">Yahoo 日度 ${day(yahoo[0]).slice(5)}：${fmt(yahoo[1])}</span>${yahooChange}` : ""), tone(lx)],
     [`二阶导（${state.win} 周，加速度）`, fmt(a), a == null ? "" : a > 0 ? "上修在加快" : "上修在放慢（或下修加剧）", tone(a)],
     [`当前阶段（${state.src === "rt" ? "实时" : "清洗"}口径${state.h > 0 ? "、去噪后" : "、不去噪"}）`, cur.phase, `自 ${cur.since} 起`,
       cur.phase.startsWith("上修") ? "up" : cur.phase.startsWith("下修") ? "dn" : ""],
@@ -900,15 +917,30 @@ chart.on("datazoom", () => {
   if (!quiet) $("#range").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
 });
 
-// 数据新鲜度：纳指超过 4 天、FactSet 周报超过 9 天没更新就提示
+// Yahoo 日期是快照采集日；与纳指收盘日、FactSet 周报日期分别展示。
 (function () {
-  const F = D.fresh, today = Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+  const F = D.fresh;
+  const parts = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  const part = t => parts.find(p => p.type === t).value;
+  const today = Date.parse(`${part("year")}-${part("month")}-${part("day")}T00:00:00Z`);
   const ago = d => Math.round((today - Date.parse(d + "T00:00:00Z")) / 864e5);
-  const a = ago(F.nasdaq), b = ago(F.factset), failed = F.nasdaq_fetch === "fallback", stale = failed || a > 4 || b > 9;
+  const weekdays = d => {
+    let n = 0;
+    for (let t = Date.parse(d + "T00:00:00Z") + 864e5; t <= today; t += 864e5) {
+      const day = new Date(t).getUTCDay();
+      if (day > 0 && day < 6) n++;
+    }
+    return n;
+  };
+  const a = ago(F.nasdaq), b = ago(F.factset), failed = F.nasdaq_fetch === "fallback";
+  const yahooFailed = ["failed", "failure"].includes(F.yahoo_fetch);
+  const stale = failed || yahooFailed || a > 4 || b > 9 || !F.yahoo || weekdays(F.yahoo) > 1;
   const el = $("#fresh");
   el.className = "fresh" + (stale ? " stale" : "");
-  el.innerHTML = (failed ? "⚠ 本次纳指下载失败，沿用缓存：" : stale ? "⚠ 数据可能不是最新：" : "数据：")
-    + `纳指收盘截至 ${F.nasdaq}（${a} 天前），FactSet 周报截至 ${F.factset}（${b} 天前）；页面生成于 ${F.generated}。`
+  el.innerHTML = (yahooFailed ? "⚠ 本次 Yahoo 盈利快照抓取失败，沿用已有数据；" : "")
+    + (failed ? "⚠ 本次纳指下载失败，沿用缓存：" : stale ? "⚠ 数据可能不是最新：" : "数据：")
+    + `Yahoo 盈利快照采集截至 ${F.yahoo || "暂无"}${F.yahoo ? `（${ago(F.yahoo)} 天前）` : ""}；`
+    + `纳指收盘截至 ${F.nasdaq}（${a} 天前），FactSet 周报截至 ${F.factset}（${b} 天前）；页面生成于 ${F.generated}（北京时间）。`
     + (stale ? "　双击 <b>盈利修正/更新修正页并打开.command</b> 刷新。" : "");
 })();
 

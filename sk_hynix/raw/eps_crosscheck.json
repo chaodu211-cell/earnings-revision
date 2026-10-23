@@ -1,0 +1,11 @@
+{
+  "shared_points": 12,
+  "fields_compared": [
+    "avg/VAL_AVG",
+    "min_max[0]/VAL_MIN",
+    "min_max[1]/VAL_MAX"
+  ],
+  "FY2026": "all equal",
+  "FY2027": "all equal",
+  "fetched_date": "2026-10-19"
+}

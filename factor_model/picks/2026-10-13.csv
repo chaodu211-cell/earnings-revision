@@ -1,0 +1,51 @@
+ticker,rank,score,mom6,E,ear,sue_a,sue_t,hi52,last_report,eps_pos,name,industry,cap_bn,rank_1w,rev30,rev90,dEP90,breadth,analysts,fwd_pe,修正,持仓
+REPL,1,1.0,5.2103,0.5512,-0.0302,0.0033,0.9108,0.7578,2026-08-14,False,Replimune Group Inc.,Biotechnology: Biological Products (No Diagnostic Substances),1.141,134.0,,,-0.067,-0.3333,2.0,,无覆盖,是
+IOVA,2,0.9984,2.9835,0.9054,0.4563,0.0046,3.1118,0.9784,2026-08-06,False,Iovance Biotherapeutics Inc.,Biotechnology: Biological Products (No Diagnostic Substances),6.5681,3.0,,,0.0084,0.6,8.0,,上修,是
+QMCO,3,0.9979,2.8379,0.9167,0.6148,0.0291,2.2767,0.7687,2026-08-10,True,Quantum Corporation,Electronic Components,1.0452,2.0,0.0,8.7168,0.0226,1.0,2.0,39.7365,无覆盖,是
+CDNA,4,0.9974,2.7113,0.8076,0.2103,0.004,1.4202,0.9367,2026-07-30,True,CareDx Inc.,Medical Specialities,3.385,6.0,-0.0243,0.1642,0.0027,0.8,6.0,51.503,上修,是
+OKTA,5,0.9969,2.5346,0.6822,0.3171,0.0007,1.3255,0.9759,2026-08-26,True,Okta Inc.,Computer Software: Prepackaged Software,39.6022,18.0,0.0,0.023,0.0004,0.9036,43.0,53.3734,持平,是
+BLZE,6,0.9963,2.4944,0.7895,0.4099,0.0044,0.9887,0.6123,2026-08-03,True,Backblaze Inc.,Computer Software: Prepackaged Software,0.7744,4.0,-0.0529,0.8114,0.0095,-1.0,4.0,47.2686,下修,是
+TEAM,7,0.9958,2.4842,0.9008,0.311,0.0033,3.9505,1.0,2026-08-06,True,Atlassian Corporation,Computer Software: Prepackaged Software,52.663,14.0,0.0113,-0.0631,-0.0015,1.0,31.0,46.2829,下修,是
+APPS,8,0.9948,2.3205,0.8692,0.4473,0.0056,1.9445,0.7199,2026-08-04,True,Digital Turbine Inc.,Multi-Sector Companies,1.261,5.0,0.0,-0.0819,-0.0073,1.0,2.0,12.2395,无覆盖,是
+DELL,9,0.9942,2.1174,0.8847,0.0818,0.0046,4.4693,0.9729,2026-09-01,True,Dell Technologies Inc. Class C,Computer Manufacturing,363.9837,7.0,0.0602,0.4278,0.0139,1.0,26.0,21.5749,上修,是
+PENG,10,0.9937,2.0404,0.902,0.1929,0.0038,4.0583,0.9608,2026-10-06,True,Penguin Solutions Inc.,Semiconductors,4.0072,9.0,0.357,0.357,0.0156,1.0,8.0,16.8441,上修,是
+HPE,11,0.9916,1.8274,0.8405,0.0552,0.0034,4.4208,0.9367,2026-09-02,True,Hewlett Packard Enterprise Company,Retail: Computer Software & Peripheral Equipment,91.3429,13.0,0.025,0.1641,0.0096,0.9459,20.0,14.7418,上修,是
+GRAL,12,0.9911,1.7798,0.5231,-0.1243,0.015,,0.9109,2026-08-05,False,GRAIL Inc.,Medical Specialities,6.2689,19.0,,,0.0107,1.0,5.0,,上修,是
+CORT,13,0.9901,1.6969,0.7093,0.2551,0.0032,0.3643,0.9533,2026-07-29,True,Corcept Therapeutics Incorporated,Biotechnology: Pharmaceutical Preparations,12.734,15.0,0.4851,1.8338,0.0215,1.0,4.0,30.0423,上修,是
+LIFE,14,0.9895,1.6964,0.9758,0.3215,0.0122,,0.9426,2026-08-03,True,Ethos Technologies Inc.,Specialty Insurers,2.574,12.0,0.0,0.3564,0.0162,1.0,4.0,16.2088,上修,是
+SNOW,15,0.989,1.6409,0.7065,0.0997,0.0005,2.7893,0.9698,2026-09-02,True,Snowflake Inc.,Computer Software: Prepackaged Software,126.2177,32.0,0.0041,0.1262,0.0009,0.9101,45.0,129.0794,上修,是
+CRWD,16,0.988,1.622,0.6363,0.2229,1e-04,1.6528,0.9367,2026-08-26,True,CrowdStrike Holdings Inc.,Computer Software: Prepackaged Software,267.462,16.0,0.0006,-0.0143,-0.0001,0.8947,51.0,173.9726,持平,是
+GTLB,17,0.9875,1.5872,0.551,0.068,0.0013,0.0,0.9275,2026-09-01,True,GitLab Inc.,Computer Software: Prepackaged Software,8.6549,36.0,0.0232,0.0232,0.0004,0.68,27.0,52.6372,持平,是
+XMTR,18,0.9854,1.4691,0.5999,0.0453,0.0,2.792,0.9715,2026-08-04,True,Xometry Inc.,Business Services,6.1852,22.0,-0.0035,0.0226,0.0002,-0.3333,11.0,93.0483,下修,是
+P,19,0.9833,1.4527,0.5535,-0.0415,0.0012,2.5679,1.0,2026-08-26,True,Everpure Inc. Class A common stock,Electronic Components,52.3067,33.0,0.1403,0.3326,0.006,1.0,19.0,41.5171,上修,是
+PRCH,20,0.9827,1.4391,0.6998,0.1343,0.0055,0.1402,0.9535,2026-07-29,True,Porch Group Inc.,Computer Software: Prepackaged Software,2.2701,28.0,0.1569,1.1461,0.0064,0.0,3.0,82.8785,上修,是
+NTAP,21,0.9822,1.4297,0.7462,-0.0028,0.0025,5.5191,0.9993,2026-09-02,True,NetApp Inc.,Electronic Components,46.9461,38.0,0.0107,0.1284,0.005,1.0,19.0,22.694,上修,是
+FTNT,22,0.9817,1.4239,0.7035,0.0274,0.001,3.6981,0.9795,2026-07-29,True,Fortinet Inc.,Computer peripheral equipment,139.9632,39.0,0.0003,0.1013,0.0018,1.0,41.0,51.4318,上修,是
+RPD,23,0.9812,1.415,0.6613,0.1599,0.0078,-0.7084,0.6708,2026-08-10,True,Rapid7 Inc.,Computer Software: Prepackaged Software,0.8708,30.0,,,0.1538,0.913,23.0,6.5014,上修,是
+NSIT,24,0.9801,1.3837,0.8657,0.0599,0.0066,3.6637,1.0,2026-08-06,True,Insight Enterprises Inc.,Catalog/Specialty Distribution,5.1616,24.0,0.0812,0.1174,0.0078,1.0,4.0,13.433,上修,是
+QLYS,25,0.9796,1.3806,0.815,0.1671,0.0013,3.6932,0.9787,2026-08-04,True,Qualys Inc.,Computer Software: Prepackaged Software,6.8536,40.0,0.0026,0.0237,0.001,1.0,22.0,23.8249,持平,是
+AMD,26,0.9791,1.374,0.5452,-0.0213,1e-04,5.6375,0.9324,2026-08-04,True,Advanced Micro Devices Inc.,Semiconductors,988.5126,11.0,0.0124,0.159,0.0032,0.5556,49.0,43.3034,上修,是
+PBF,27,0.978,1.3647,0.8719,0.1169,0.0333,1.9552,1.0,2026-07-30,True,PBF Energy Inc.,Integrated oil Companies,10.807,83.0,0.4738,1.7557,0.1314,1.0,14.0,4.8492,上修,是
+ECO,28,0.9775,1.3197,0.7585,-0.0284,0.0267,4.3457,1.0,2026-08-04,True,Okeanis Eco Tankers Corp.,Marine Transportation,3.8756,70.0,0.0,0.2419,0.0156,1.0,1.0,12.5032,无覆盖,是
+TENB,29,0.977,1.3106,0.7503,0.0365,0.0013,4.5905,0.9681,2026-07-29,True,Tenable Holdings Inc.,Computer Software: Prepackaged Software,4.5477,46.0,0.0055,0.0116,0.0006,0.7778,23.0,19.2004,持平,是
+DINO,30,0.9765,1.2726,0.7246,0.0044,0.0091,1.7363,1.0,2026-07-28,True,HF Sinclair Corporation,Natural Gas Distribution,22.7972,72.0,0.346,0.7515,0.0509,1.0,15.0,8.4279,上修,是
+TWLO,31,0.976,1.2709,0.7725,0.2442,0.0008,3.117,0.9347,2026-08-06,True,Twilio Inc.,Computer Software: Prepackaged Software,43.2452,31.0,0.0014,0.0261,0.0006,0.9286,28.0,42.5784,持平,
+NTSK,32,0.9754,1.2645,0.6675,0.0057,0.0028,,0.8718,2026-09-02,False,Netskope Inc.,Computer Software: Prepackaged Software,8.6416,64.0,,,0.0024,1.0,18.0,,持平,
+FROG,33,0.9739,1.2381,0.6675,0.0546,0.0004,3.3675,0.9543,2026-08-06,True,JFrog Ltd.,Computer Software: Prepackaged Software,12.2414,75.0,0.0,0.0231,0.0003,0.8235,23.0,89.4589,持平,
+OSCR,34,0.9723,1.2099,0.6661,-0.0779,0.0239,2.9637,0.9935,2026-08-06,True,Oscar Health Inc.,Medical Specialities,10.4291,20.0,0.1661,0.5456,0.0226,1.0,8.0,15.6313,上修,
+CBRL,35,0.9718,1.2093,0.7712,0.1479,0.0178,0.5271,1.0,2026-09-23,True,Cracker Barrel Old Country Store Inc,Restaurants,1.3691,66.0,0.6548,1.6256,0.0204,1.0,7.0,30.3361,上修,
+SDGR,36,0.9707,1.1738,0.8072,0.1416,0.016,1.0207,0.7942,2026-08-05,False,Schrodinger Inc.,Biotechnology: Pharmaceutical Preparations,1.9367,,,,-0.0018,0.5385,7.0,,持平,
+MPC,37,0.9697,1.144,0.7232,-0.0462,0.0123,4.4154,1.0,2026-08-04,True,Marathon Petroleum Corporation,Integrated oil Companies,133.9478,88.0,0.4082,1.0966,0.0625,1.0,18.0,8.3739,上修,
+BB,38,0.9692,1.1335,0.5436,-0.0249,0.0036,0.6561,0.6612,2026-09-24,True,BlackBerry Limited,Computer Software: Prepackaged Software,4.9722,17.0,0.051,0.051,0.0013,0.7143,7.0,37.7367,上修,
+RNG,39,0.9686,1.1246,0.8323,0.2941,0.0013,3.8034,0.9858,2026-07-23,True,RingCentral Inc.,EDP Services,6.5711,49.0,0.0115,0.0332,0.0022,0.9231,13.0,14.4059,上修,
+CVI,40,0.9676,1.108,0.7503,0.1275,0.0068,0.6024,1.0,2026-07-29,True,CVR Energy Inc.,Integrated oil Companies,6.3455,91.0,1.0508,1.772,0.0363,1.0,6.0,17.6291,上修,
+ZETA,41,0.9671,1.0864,0.8788,0.1839,0.0035,3.2091,1.0,2026-08-04,True,Zeta Global Holdings Corp.,Computer Software: Prepackaged Software,8.4843,50.0,-0.0021,0.0441,0.0014,0.6364,12.0,29.309,上修,
+ESTC,42,0.966,1.078,0.7222,0.2564,0.0015,1.1604,0.944,2026-08-27,True,Elastic N.V.,Computer Software: Prepackaged Software,9.9028,79.0,0.0,0.0278,0.001,0.7193,29.0,25.9697,持平,
+DK,43,0.9655,1.0712,0.5759,-0.1099,0.0429,1.4841,0.9902,2026-08-05,True,Delek US Holdings Inc.,Integrated oil Companies,4.9445,110.0,0.3367,2.2145,0.086,0.75,11.0,8.0122,上修,
+MU,44,0.965,1.0473,0.7435,0.0306,0.0015,3.9531,0.7856,2026-09-30,True,Micron Technology Inc.,Semiconductors,1078.4613,10.0,0.1347,0.18,0.0288,0.88,35.0,5.3017,上修,
+MGNI,45,0.9639,1.0321,0.6536,0.1695,0.0,2.4495,0.9864,2026-08-05,True,Magnite Inc.,Computer Software: Programming Data Processing,3.6315,48.0,0.0206,0.0555,0.0026,0.3333,10.0,19.8557,上修,
+HAE,46,0.9634,1.0126,0.5245,0.0462,0.0007,0.3761,0.9972,2026-08-06,True,Haemonetics Corporation,Medical/Dental Instruments,5.5379,81.0,0.0046,0.0228,0.001,1.0,11.0,21.885,持平,
+NEO,47,0.9624,0.9952,0.6585,0.1751,0.0015,0.5015,0.8368,2026-07-28,True,NeoGenomics Inc.,Precision Instruments,2.1404,27.0,0.0149,-0.0499,-0.001,0.0667,11.0,53.8273,下修,
+PAYC,48,0.9618,0.9834,0.8694,0.2356,0.0023,3.7717,0.9839,2026-08-05,True,Paycom Software Inc.,Computer Software: Prepackaged Software,10.6662,84.0,0.0009,0.1312,0.0066,1.0,21.0,17.4449,上修,
+NTNX,49,0.9613,0.9788,0.7748,0.0444,0.0017,4.3916,0.9766,2026-08-26,True,Nutanix Inc.,Computer Software: Prepackaged Software,19.7192,87.0,0.004,0.058,0.0018,0.75,16.0,30.435,上修,
+ETON,50,0.9608,0.9664,0.8891,0.4106,0.0058,2.3415,0.8277,2026-08-13,True,Eton Pharmaceuticals Inc.,Biotechnology: Pharmaceutical Preparations,1.5243,35.0,0.3741,0.3741,0.0119,1.0,2.0,22.9097,无覆盖,

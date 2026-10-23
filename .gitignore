@@ -8,7 +8,11 @@ txt/
 _spx.csv
 _nasdaq.csv
 _members_px.csv
+yahoo_local/
 *.log
 _log_*.txt
 __pycache__/
 .DS_Store
+
+# 选股因子模型的行情 / 财报缓存（约 130 MB）
+factor_model/_cache/

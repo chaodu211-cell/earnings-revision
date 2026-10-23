@@ -1,0 +1,24 @@
+{
+  "fetched_at": "2026-10-19T20:22:41.605575+08:00",
+  "security": "000660 / SK hynix / KOSPI",
+  "currency": "KRW",
+  "requests": [
+    {
+      "year": 2026,
+      "wise_url": "https://comp.wisereport.co.kr/company/ajax/cF5002.aspx?cmp_cd=000660&dt=20261019&yymm=202612&frq=Y&acc_cd=312000&fingubun=IFRSL&chartType=svg",
+      "fnguide_url": "https://wcomp.fnguide.com/CompanyInfo/getCnsTrendChart?cmp_cd=000660&consol_typ=C&freq_typ=Y&select_gsym=202612&data_typ=3",
+      "first": "2025-10-31",
+      "last": "2026-10-16",
+      "points": 13
+    },
+    {
+      "year": 2027,
+      "wise_url": "https://comp.wisereport.co.kr/company/ajax/cF5002.aspx?cmp_cd=000660&dt=20261019&yymm=202712&frq=Y&acc_cd=312000&fingubun=IFRSL&chartType=svg",
+      "fnguide_url": "https://wcomp.fnguide.com/CompanyInfo/getCnsTrendChart?cmp_cd=000660&consol_typ=C&freq_typ=Y&select_gsym=202712&data_typ=3",
+      "first": "2025-10-31",
+      "last": "2026-10-16",
+      "points": 13
+    }
+  ],
+  "price_url": "https://api.finance.naver.com/siseJson.naver?symbol=000660&requestType=1&startTime=20200101&endTime=20261019&timeframe=day"
+}

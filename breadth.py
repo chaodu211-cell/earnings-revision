@@ -11,14 +11,15 @@
 
 广度走势：每个点 = 截至那天的近 30 天（前 10 大 / 其余公司的修正、全部公司的净广度）。最早那份快照还能算出 60、30 天前那两段，
   之后每份快照添一个点（当天往前 30 天）。净广度 = 修正 > +0.5% 的公司占比 − < −0.5% 的占比（百分点）。
-make_chart.py 调 breadth_data() 内嵌进页面；快照由 GitHub Actions 每个交易日拍一份（页面用到前一天那份）。
+make_chart.py 调 breadth_data() 内嵌进页面；先采集再生成，合并 GitHub 历史与本地补抓。
 单独跑：python3 breadth.py  → 打印最新一份的摘要
 """
-import glob, json, os
+import json, os
 from datetime import date
 
 import numpy as np
 import pandas as pd
+from snapshot_store import snapshot_paths
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 SECTORS = os.environ.get("REV_SECTORS") or os.path.join(os.path.dirname(BASE), "sectors.json")
@@ -49,7 +50,7 @@ def index_7d():
     """每份快照的全指数 7 天纯修正（对数，Σ股本×远期EPS 今天 vs 7 天前，权重固定）：{快照日 Timestamp: 值}。
     realtime.guard 用它当场判断 FactSet 单周大幅变动是真是假。"""
     ends, out = {}, {}
-    for path in sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv"))):
+    for path in snapshot_paths(BASE):
         try:
             day, d, w = _load(path, ends)
         except Exception:
@@ -145,7 +146,7 @@ def window(day, g, a, b, back):
 
 def breadth_data():
     """全部快照 → {"trend": 广度走势各点, "daily": 每天的全指数 90 天纯修正, "latest": 最新一份的明细}；没有快照返回 None。"""
-    paths = sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv")))
+    paths = snapshot_paths(BASE)
     trend, daily, latest, ends = [], [], None, {}
     for path in paths:
         try:

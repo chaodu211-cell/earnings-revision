@@ -21,11 +21,13 @@ Yahoo 每只股票给出 当前 / 7 / 30 / 60 / 90 天前 的一致预期 EPS，
 输出：yahoo/YYYY-MM-DD.csv（逐股），yahoo_agg.csv（每天一行汇总，同日重跑覆盖），
       yahoo_sector.csv（每天每个 GICS 行业一行）
 """
-import argparse, csv, json, os, sys, time
+import argparse, csv, json, os, sys, tempfile, time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from yfinance.data import YfData
+from snapshot_store import usable_eps, usable_snapshot
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE, "yahoo")
@@ -46,7 +48,7 @@ def fetch(sym):
     for k in range(3):
         try:
             j = yd.get_raw_json(URL.format(sym=sym),
-                                params={"modules": "earningsTrend,price,defaultKeyStatistics"})
+                                params={"modules": "earningsTrend,price,defaultKeyStatistics"}, timeout=15)
             r = j["quoteSummary"]["result"][0]
             break
         except Exception:
@@ -153,23 +155,61 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tickers", nargs="*")
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--local", action="store_true", help="本地补抓存到 yahoo_local/，不改 GitHub 管理的历史和汇总")
     a = ap.parse_args()
-    syms = a.tickers or sorted(json.load(open(SECTORS)))
-    today = date.today()
+    if a.tickers:
+        syms = a.tickers
+    else:
+        with open(SECTORS) as f:
+            syms = sorted(json.load(f))
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    today = now.date()
+    out = os.path.join(BASE, "yahoo_local") if a.local else OUT
+    target = os.path.join(out, f"{today}.csv")
+    if a.local:
+        if a.tickers:
+            ap.error("--local 只允许完整成分股快照，不能与 --tickers 合用")
+        official = os.path.join(OUT, f"{today}.csv")
+        if usable_snapshot(official, 0.9 * len(syms)) or usable_snapshot(target, 0.9 * len(syms)):
+            print(f"SNAPSHOT_STATUS existing {today} 今天已有快照")
+            return
+        et = now.astimezone(ZoneInfo("America/New_York"))
+        if et.weekday() < 5 and 900 <= et.hour * 100 + et.minute < 1630 and today != et.date():
+            print("SNAPSHOT_STATUS market_hours 美股盘中且北京已跨日，快照留给当天盘前采集")
+            return
+    # 本地断网时先快速失败，避免对全部成分股逐个超时；首次结果复用。
+    first = fetch("AAPL" if "AAPL" in syms else syms[0]) if a.local else None
+    if a.local and first is None:
+        sys.exit("Yahoo 连接检查失败，未写入新快照；请检查网络或系统代理")
     with ThreadPoolExecutor(a.workers) as ex:
-        rows = [r for r in ex.map(fetch, syms) if r]
+        pending = [s for s in syms if first is None or s != first["ticker"]]
+        rows = ([first] if first else []) + [r for r in ex.map(fetch, pending) if r]
+    rows.sort(key=lambda r: r["ticker"])
     print(f"fetched {len(rows)}/{len(syms)}")
     if not a.tickers and len(rows) < 0.9 * len(syms):
         # 快照历史只增不改：被限流拿到半截时宁可当天缺一份，也不写进去
         sys.exit(f"只拿到 {len(rows)}/{len(syms)} 只，疑似被 Yahoo 限流——不写快照")
-    os.makedirs(OUT, exist_ok=True)
+    valid = sum(usable_eps(r) for r in rows)
+    if not a.tickers and valid < 0.9 * len(syms):
+        sys.exit(f"只有 {valid}/{len(syms)} 只具有完整年度 EPS，盈利模块缺失——不写快照")
+    os.makedirs(out, exist_ok=True)
     cols = sorted({k for r in rows for k in r}, key=lambda k: (k != "ticker", k))
-    with open(os.path.join(OUT, f"{today}.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", newline="", dir=out, suffix=".tmp", delete=False) as f:
+            tmp = f.name
+            w = csv.DictWriter(f, fieldnames=cols)
+            w.writeheader()
+            w.writerows(rows)
+        os.replace(tmp, target)
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.unlink(tmp)
     agg = aggregate(rows, today)
     print(json.dumps(agg, ensure_ascii=False))
+    if a.local:
+        print(f"SNAPSHOT_STATUS downloaded {today} 本地补抓已保存，{len(rows)} 家")
+        return
     if a.tickers:
         return
     upsert(AGG, [agg], ("date",))

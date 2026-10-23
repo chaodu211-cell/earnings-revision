@@ -1,0 +1,21 @@
+{
+  "fetched_at": "2026-10-19T20:22:41.605575+08:00",
+  "currency": "KRW",
+  "source": "FnGuide / WiseReport",
+  "observations": [
+    {
+      "fiscal_year": 2026,
+      "date": "2026-10-16",
+      "eps": 353888.06,
+      "low": 284502.65,
+      "high": 400333.95
+    },
+    {
+      "fiscal_year": 2027,
+      "date": "2026-10-16",
+      "eps": 453943.07,
+      "low": 234462.41,
+      "high": 633912.17
+    }
+  ]
+}

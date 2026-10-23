@@ -33,6 +33,7 @@ import pandas as pd
 
 import breadth
 from analyze import drop_partial
+from snapshot_store import snapshot_paths
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.join(BASE, "early_log.csv")
@@ -229,7 +230,7 @@ def track(log, px):
 
 def page_data():
     """make_chart.py 调：最新快照的名单（CI 上顺带记录）+ 历史入选的跟踪。没有快照返回 None。"""
-    paths = sorted(glob.glob(os.path.join(BASE, "yahoo", "20*.csv")))
+    paths = snapshot_paths(BASE)
     if not paths:
         return None
     ends = {}

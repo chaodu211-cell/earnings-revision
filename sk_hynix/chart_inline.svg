@@ -1,0 +1,1057 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1040.4pt" height="698.4pt" viewBox="0 0 1040.4 698.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-19T20:42:41.978897</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.7.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 698.4 
+L 1040.4 698.4 
+L 1040.4 0 
+L 0 0 
+z
+" style="fill: #f5f7fb"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 79.2 168.101412 
+L 954 168.101412 
+L 954 22.5 
+L 79.2 22.5 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m6f3a0b0a98" d="M 0 0 
+L 0 3.5 
+" style="stroke: #64748b; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="152.892391" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="300.277174" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="440.530435" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="585.538043" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="730.545652" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="875.553261" y="168.101412" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 79.2 145.98544 
+L 954 145.98544 
+" clip-path="url(#p8bb2f421b9)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="ma17dba32de" d="M 0 0 
+L -3.5 0 
+" style="stroke: #64748b; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="145.98544" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="149.261299" transform="rotate(-0 72.2 149.261299)">80</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 79.2 101.8638 
+L 954 101.8638 
+" clip-path="url(#p8bb2f421b9)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="101.8638" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="105.139659" transform="rotate(-0 72.2 105.139659)">160</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 79.2 57.74216 
+L 954 57.74216 
+" clip-path="url(#p8bb2f421b9)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="57.74216" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="61.018019" transform="rotate(-0 72.2 61.018019)">240</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="fill: #64748b; font: 10px 'PingFang HK'; text-anchor: middle" x="50.020312" y="95.300706" transform="rotate(-90 50.020312 95.300706)">万韩元</text>
+    </g>
+   </g>
+   <g id="line2d_13">
+    <path d="M 79.2 159.277084 
+L 86.331522 155.912809 
+L 88.708696 157.787979 
+L 91.08587 158.174043 
+L 93.463043 157.401914 
+L 95.840217 158.118891 
+L 102.971739 156.684938 
+L 105.348913 155.967961 
+L 107.726087 156.078265 
+L 110.103261 156.354025 
+L 112.480435 159.221932 
+L 119.611957 156.684938 
+L 121.98913 158.670411 
+L 124.366304 159.111628 
+L 126.743478 158.615259 
+L 129.120652 161.372862 
+L 138.629348 161.483166 
+L 141.006522 161.207406 
+L 143.383696 160.104365 
+L 145.76087 160.876493 
+L 152.892391 160.435277 
+L 155.269565 159.332236 
+L 157.646739 159.663148 
+L 160.023913 160.214669 
+L 162.401087 160.104365 
+L 169.532609 158.284347 
+L 171.909783 158.89102 
+L 174.286957 157.732827 
+L 176.66413 158.946172 
+L 179.041304 158.615259 
+L 186.172826 159.552844 
+L 188.55 160.876493 
+L 190.927174 159.7183 
+L 193.304348 159.663148 
+L 195.681522 159.938908 
+L 202.813043 158.118891 
+L 207.567391 157.677674 
+L 212.321739 157.071002 
+L 219.453261 154.809768 
+L 221.830435 154.203095 
+L 228.961957 152.769142 
+L 236.093478 151.721253 
+L 238.470652 150.066692 
+L 243.225 148.41213 
+L 245.602174 149.073955 
+L 252.733696 148.798194 
+L 255.11087 149.404867 
+L 257.488043 149.184259 
+L 262.242391 148.41213 
+L 269.373913 147.970914 
+L 271.751087 149.129107 
+L 274.128261 149.294563 
+L 276.505435 148.467282 
+L 278.882609 147.805458 
+L 286.01413 149.515171 
+L 288.391304 145.98544 
+L 290.768478 143.724206 
+L 293.145652 142.621165 
+L 295.522826 139.973866 
+L 302.654348 144.330878 
+L 305.031522 140.084171 
+L 307.408696 140.470235 
+L 309.78587 143.669054 
+L 312.163043 143.83451 
+L 319.294565 141.187212 
+L 321.671739 141.793884 
+L 324.048913 142.676317 
+L 326.426087 141.132059 
+L 328.803261 141.573276 
+L 343.066304 140.801147 
+L 345.443478 137.767784 
+L 352.575 137.65748 
+L 354.952174 134.67927 
+L 357.329348 133.962293 
+L 359.706522 129.494977 
+L 362.083696 131.590755 
+L 371.592391 138.319305 
+L 373.969565 143.282989 
+L 376.346739 138.209001 
+L 378.723913 139.146586 
+L 385.855435 143.999966 
+L 388.232609 138.374457 
+L 390.609783 137.436872 
+L 392.986957 138.815673 
+L 395.36413 139.918714 
+L 402.495652 136.388983 
+L 404.872826 136.609591 
+L 407.25 131.866515 
+L 409.627174 134.238053 
+L 412.004348 134.568966 
+L 419.13587 138.650217 
+L 421.513043 135.727159 
+L 423.890217 135.23079 
+L 426.267391 138.650217 
+L 428.644565 139.25689 
+L 435.776087 141.95934 
+L 438.153261 145.599376 
+L 440.530435 140.856299 
+L 442.907609 144.330878 
+L 445.284783 141.793884 
+L 452.416304 141.242364 
+L 454.793478 139.587802 
+L 457.170652 133.135012 
+L 459.547826 135.065334 
+L 461.925 133.465925 
+L 469.056522 132.748948 
+L 471.433696 129.274369 
+L 473.81087 127.454351 
+L 476.188043 126.406462 
+L 478.565217 127.895567 
+L 485.696739 125.79979 
+L 488.073913 122.600971 
+L 490.451087 122.656123 
+L 492.828261 122.545819 
+L 495.205435 122.711275 
+L 502.336957 118.850631 
+L 504.71413 118.409415 
+L 509.468478 119.181544 
+L 518.977174 110.302064 
+L 523.731522 101.808648 
+L 526.108696 98.885589 
+L 528.48587 97.120724 
+L 535.617391 86.421226 
+L 537.994565 88.903068 
+L 540.371739 81.126629 
+L 542.748913 81.457541 
+L 545.126087 89.785501 
+L 552.257609 88.627308 
+L 554.634783 93.866753 
+L 557.011957 93.866753 
+L 559.38913 83.112103 
+L 561.766304 83.056951 
+L 571.275 76.935073 
+L 573.652174 66.401032 
+L 578.406522 61.437347 
+L 585.538043 59.782786 
+L 587.915217 59.948242 
+L 592.669565 63.367669 
+L 595.046739 75.942336 
+L 602.178261 84.711512 
+L 604.555435 67.945289 
+L 606.932609 77.155682 
+L 609.309783 74.232623 
+L 611.686957 71.530172 
+L 618.818478 63.91919 
+L 621.195652 58.734897 
+L 623.572826 51.068762 
+L 625.95 42.023826 
+L 628.327174 37.666814 
+L 635.458696 29.118246 
+L 637.83587 49.193592 
+L 640.213043 47.814791 
+L 642.590217 29.22855 
+L 644.967391 42.68565 
+L 652.098913 45.167493 
+L 654.476087 43.954147 
+L 656.853261 48.917832 
+L 659.230435 69.489547 
+L 661.607609 56.363359 
+L 668.73913 60.885827 
+L 671.116304 68.717418 
+L 673.493478 75.611424 
+L 675.870652 69.544699 
+L 678.247826 69.875611 
+L 685.379348 88.351548 
+L 687.756522 84.601208 
+L 690.133696 75.280512 
+L 692.51087 88.517004 
+L 702.019565 92.818864 
+L 704.396739 88.847916 
+L 706.773913 89.178828 
+L 709.151087 84.270296 
+L 711.528261 93.094624 
+L 718.659783 89.950957 
+L 721.036957 104.621402 
+L 723.41413 112.839058 
+L 725.791304 117.19607 
+L 728.168478 95.355858 
+L 735.3 103.683818 
+L 737.677174 103.132297 
+L 740.054348 98.11346 
+L 742.431522 107.654765 
+L 744.808696 111.680865 
+L 751.940217 111.791169 
+L 754.317391 111.515409 
+L 756.694565 107.158397 
+L 759.071739 102.249864 
+L 761.448913 99.381958 
+L 770.957609 98.444373 
+L 773.334783 107.379005 
+L 775.711957 96.844963 
+L 778.08913 94.694033 
+L 785.220652 97.948004 
+L 787.597826 97.56194 
+L 789.975 97.010419 
+L 792.352174 94.694033 
+L 794.729348 98.940741 
+L 801.86087 97.782548 
+L 804.238043 96.734659 
+L 806.615217 101.146823 
+L 808.992391 102.084408 
+L 811.369565 99.271654 
+L 818.501087 91.770975 
+L 820.878261 91.219454 
+L 823.255435 87.744875 
+L 825.632609 87.910331 
+L 828.009783 90.171565 
+L 835.141304 97.28618 
+L 837.518478 95.68677 
+L 839.895652 93.204928 
+L 842.272826 92.70856 
+L 844.65 88.130939 
+L 851.781522 86.476378 
+L 854.158696 88.572156 
+L 856.53587 87.358811 
+L 868.421739 92.98432 
+L 870.798913 91.38491 
+L 873.176087 91.770975 
+L 875.553261 89.289133 
+L 877.930435 88.517004 
+L 887.43913 91.715823 
+L 889.816304 95.521314 
+L 892.193478 97.120724 
+L 901.702174 101.58804 
+L 904.079348 109.805695 
+L 906.456522 111.515409 
+L 908.833696 121.828842 
+L 911.21087 120.339737 
+L 918.342391 118.188807 
+L 918.342391 118.188807 
+" clip-path="url(#p8bb2f421b9)" style="fill: none; stroke: #1e293b; stroke-width: 1.6; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 79.2 168.101412 
+L 79.2 22.5 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 79.2 168.101412 
+L 954 168.101412 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_5">
+    <text style="fill: #0f172a; font: 700 12px 'PingFang HK'; text-anchor: start" x="79.2" y="12.5" transform="rotate(-0 79.2 12.5)">01  股价走势</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 79.2 347.657073 
+L 954 347.657073 
+L 954 213.703774 
+L 79.2 213.703774 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_7">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="152.892391" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="300.277174" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="440.530435" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="585.538043" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="730.545652" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="875.553261" y="347.657073" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_4">
+     <g id="line2d_20">
+      <path d="M 79.2 317.851201 
+L 954 317.851201 
+" clip-path="url(#pff992c83db)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="317.851201" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="321.127061" transform="rotate(-0 72.2 321.127061)">15</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_22">
+      <path d="M 79.2 269.457941 
+L 954 269.457941 
+" clip-path="url(#pff992c83db)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="269.457941" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="272.7338" transform="rotate(-0 72.2 272.7338)">30</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_24">
+      <path d="M 79.2 221.064681 
+L 954 221.064681 
+" clip-path="url(#pff992c83db)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="221.064681" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="224.34054" transform="rotate(-0 72.2 224.34054)">45</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="fill: #64748b; font: 10px 'PingFang HK'; text-anchor: middle" x="55.420313" y="280.680424" transform="rotate(-90 55.420313 280.680424)">万韩元 / 股</text>
+    </g>
+   </g>
+   <g id="line2d_26">
+    <path d="M 79.2 341.568287 
+L 145.76087 339.738112 
+L 221.830435 338.46704 
+L 295.522826 315.777182 
+L 362.083696 310.331228 
+L 438.153261 306.620548 
+L 509.468478 275.206605 
+L 578.406522 270.907819 
+L 654.476087 267.415265 
+L 728.168478 255.518433 
+L 801.86087 253.466956 
+L 873.176087 252.824558 
+L 911.21087 252.072481 
+" clip-path="url(#pff992c83db)" style="fill: none; stroke: #2563eb; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m8f12e8d289" d="M 0 2 
+C 0.530406 2 1.03916 1.789267 1.414214 1.414214 
+C 1.789267 1.03916 2 0.530406 2 0 
+C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214 
+C 1.03916 -1.789267 0.530406 -2 0 -2 
+C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214 
+C -1.789267 -1.03916 -2 -0.530406 -2 0 
+C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214 
+C -1.03916 1.789267 -0.530406 2 0 2 
+z
+" style="stroke: #2563eb"/>
+    </defs>
+    <g clip-path="url(#pff992c83db)">
+     <use xlink:href="#m8f12e8d289" x="79.2" y="341.568287" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="145.76087" y="339.738112" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="221.830435" y="338.46704" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="295.522826" y="315.777182" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="362.083696" y="310.331228" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="438.153261" y="306.620548" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="509.468478" y="275.206605" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="578.406522" y="270.907819" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="654.476087" y="267.415265" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="728.168478" y="255.518433" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="801.86087" y="253.466956" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="873.176087" y="252.824558" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="911.21087" y="252.072481" style="fill: #2563eb; stroke: #2563eb"/>
+    </g>
+   </g>
+   <g id="line2d_27">
+    <path d="M 79.2 340.121654 
+L 145.76087 337.766277 
+L 221.830435 336.423641 
+L 295.522826 311.56674 
+L 362.083696 304.826281 
+L 438.153261 300.300827 
+L 509.468478 247.593175 
+L 578.406522 240.737728 
+L 654.476087 228.718271 
+L 728.168478 225.130282 
+L 801.86087 225.520913 
+L 873.176087 221.492974 
+L 911.21087 219.79256 
+" clip-path="url(#pff992c83db)" style="fill: none; stroke: #0d9488; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mb7adf3f6cd" d="M 0 2 
+C 0.530406 2 1.03916 1.789267 1.414214 1.414214 
+C 1.789267 1.03916 2 0.530406 2 0 
+C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214 
+C 1.03916 -1.789267 0.530406 -2 0 -2 
+C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214 
+C -1.789267 -1.03916 -2 -0.530406 -2 0 
+C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214 
+C -1.03916 1.789267 -0.530406 2 0 2 
+z
+" style="stroke: #0d9488"/>
+    </defs>
+    <g clip-path="url(#pff992c83db)">
+     <use xlink:href="#mb7adf3f6cd" x="79.2" y="340.121654" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="145.76087" y="337.766277" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="221.830435" y="336.423641" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="295.522826" y="311.56674" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="362.083696" y="304.826281" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="438.153261" y="300.300827" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="509.468478" y="247.593175" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="578.406522" y="240.737728" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="654.476087" y="228.718271" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="728.168478" y="225.130282" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="801.86087" y="225.520913" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="873.176087" y="221.492974" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="911.21087" y="219.79256" style="fill: #0d9488; stroke: #0d9488"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 79.2 347.657073 
+L 79.2 213.703774 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 79.2 347.657073 
+L 954 347.657073 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="fill: #2563eb; font: 10px 'PingFang HK'; text-anchor: start" x="919.21087" y="254.722481" transform="rotate(-0 919.21087 254.722481)">35.39</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #0d9488; font: 10px 'PingFang HK'; text-anchor: start" x="919.21087" y="222.44256" transform="rotate(-0 919.21087 222.44256)">45.39</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #0f172a; font: 700 12px 'PingFang HK'; text-anchor: start" x="79.2" y="203.703774" transform="rotate(-0 79.2 203.703774)">02  固定财年 EPS 一致预期</text>
+   </g>
+   <g id="legend_1">
+    <g id="line2d_28">
+     <path d="M 88.2 226.513149 
+L 98.2 226.513149 
+L 108.2 226.513149 
+" style="fill: none; stroke: #2563eb; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#m8f12e8d289" x="98.2" y="226.513149" style="fill: #2563eb; stroke: #2563eb"/>
+     </g>
+    </g>
+    <g id="text_13">
+     <text style="font: 10px 'PingFang HK'; text-anchor: start" x="116.2" y="230.013149" transform="rotate(-0 116.2 230.013149)">2026 财年</text>
+    </g>
+    <g id="line2d_29">
+     <path d="M 183.529688 226.513149 
+L 193.529688 226.513149 
+L 203.529688 226.513149 
+" style="fill: none; stroke: #0d9488; stroke-width: 1.8; stroke-linecap: square"/>
+     <g>
+      <use xlink:href="#mb7adf3f6cd" x="193.529688" y="226.513149" style="fill: #0d9488; stroke: #0d9488"/>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font: 10px 'PingFang HK'; text-anchor: start" x="211.529688" y="230.013149" transform="rotate(-0 211.529688 230.013149)">2027 财年</text>
+    </g>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_8">
+    <path d="M 79.2 509.740565 
+L 954 509.740565 
+L 954 393.259435 
+L 79.2 393.259435 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_5">
+    <g id="xtick_13">
+     <g id="line2d_30">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="152.892391" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="300.277174" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_15">
+     <g id="line2d_32">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="440.530435" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_16">
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="585.538043" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_17">
+     <g id="line2d_34">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="730.545652" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_18">
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="875.553261" y="509.740565" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_6">
+    <g id="ytick_7">
+     <g id="line2d_36">
+      <path d="M 79.2 503.666948 
+L 954 503.666948 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_37">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="503.666948" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="506.942808" transform="rotate(-0 72.2 506.942808)">0</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_38">
+      <path d="M 79.2 471.49732 
+L 954 471.49732 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_39">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="471.49732" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="474.773179" transform="rotate(-0 72.2 474.773179)">5</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_40">
+      <path d="M 79.2 439.327691 
+L 954 439.327691 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_41">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="439.327691" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="442.603551" transform="rotate(-0 72.2 442.603551)">10</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_42">
+      <path d="M 79.2 407.158063 
+L 954 407.158063 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_43">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="407.158063" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="410.433922" transform="rotate(-0 72.2 410.433922)">15</text>
+     </g>
+    </g>
+    <g id="text_19">
+     <text style="fill: #64748b; font: 10px 'PingFang HK'; text-anchor: middle" x="57.211875" y="451.5" transform="rotate(-90 57.211875 451.5)">万韩元 / 股 / 月</text>
+    </g>
+   </g>
+   <g id="line2d_44">
+    <path d="M 145.76087 500.017098 
+L 221.830435 501.132097 
+L 295.522826 458.417406 
+L 362.083696 492.806282 
+L 438.153261 496.266879 
+L 509.468478 441.019286 
+L 578.406522 495.094038 
+L 654.476087 496.701876 
+L 728.168478 479.941538 
+L 801.86087 499.575763 
+L 873.176087 502.385838 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #2563eb; stroke-width: 1.7; stroke-linecap: square"/>
+    <g clip-path="url(#paad0029c05)">
+     <use xlink:href="#m8f12e8d289" x="145.76087" y="500.017098" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="221.830435" y="501.132097" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="295.522826" y="458.417406" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="362.083696" y="492.806282" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="438.153261" y="496.266879" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="509.468478" y="441.019286" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="578.406522" y="495.094038" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="654.476087" y="496.701876" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="728.168478" y="479.941538" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="801.86087" y="499.575763" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="873.176087" y="502.385838" style="fill: #2563eb; stroke: #2563eb"/>
+    </g>
+   </g>
+   <g id="line2d_45">
+    <path d="M 145.76087 498.969706 
+L 221.830435 500.98938 
+L 295.522826 454.095751 
+L 362.083696 490.224702 
+L 438.153261 494.642003 
+L 509.468478 398.554032 
+L 578.406522 489.995384 
+L 654.476087 479.696991 
+L 728.168478 496.511554 
+L 801.86087 504.445968 
+L 873.176087 495.634179 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke: #0d9488; stroke-width: 1.7; stroke-linecap: square"/>
+    <g clip-path="url(#paad0029c05)">
+     <use xlink:href="#mb7adf3f6cd" x="145.76087" y="498.969706" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="221.830435" y="500.98938" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="295.522826" y="454.095751" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="362.083696" y="490.224702" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="438.153261" y="494.642003" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="509.468478" y="398.554032" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="578.406522" y="489.995384" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="654.476087" y="479.696991" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="728.168478" y="496.511554" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="801.86087" y="504.445968" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="873.176087" y="495.634179" style="fill: #0d9488; stroke: #0d9488"/>
+    </g>
+   </g>
+   <g id="line2d_46">
+    <path d="M 79.2 503.666948 
+L 954 503.666948 
+" clip-path="url(#paad0029c05)" style="fill: none; stroke-dasharray: 3.33,1.44; stroke-dashoffset: 0; stroke: #94a3b8; stroke-width: 0.9"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 79.2 509.740565 
+L 79.2 393.259435 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 79.2 509.740565 
+L 954 509.740565 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_20">
+    <text style="fill: #2563eb; font: 9px 'PingFang HK'; text-anchor: start" x="881.176087" y="512.385838" transform="rotate(-0 881.176087 512.385838)">+0.20</text>
+   </g>
+   <g id="text_21">
+    <text style="fill: #0d9488; font: 9px 'PingFang HK'; text-anchor: start" x="881.176087" y="487.634179" transform="rotate(-0 881.176087 487.634179)">+1.25</text>
+   </g>
+   <g id="text_22">
+    <text style="fill: #0f172a; font: 700 12px 'PingFang HK'; text-anchor: start" x="79.2" y="383.259435" transform="rotate(-0 79.2 383.259435)">03  EPS 一阶导：相邻月份 EPS 的变化</text>
+   </g>
+  </g>
+  <g id="axes_4">
+   <g id="patch_11">
+    <path d="M 79.2 666 
+L 954 666 
+L 954 555.342927 
+L 79.2 555.342927 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_7">
+    <g id="xtick_19">
+     <g id="line2d_47">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="152.892391" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_23">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="152.892391" y="679.551719" transform="rotate(-0 152.892391 679.551719)">2025-12</text>
+     </g>
+    </g>
+    <g id="xtick_20">
+     <g id="line2d_48">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="300.277174" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="300.277174" y="679.551719" transform="rotate(-0 300.277174 679.551719)">2026-02</text>
+     </g>
+    </g>
+    <g id="xtick_21">
+     <g id="line2d_49">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="440.530435" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="440.530435" y="679.551719" transform="rotate(-0 440.530435 679.551719)">2026-04</text>
+     </g>
+    </g>
+    <g id="xtick_22">
+     <g id="line2d_50">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="585.538043" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="585.538043" y="679.551719" transform="rotate(-0 585.538043 679.551719)">2026-06</text>
+     </g>
+    </g>
+    <g id="xtick_23">
+     <g id="line2d_51">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="730.545652" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_27">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="730.545652" y="679.551719" transform="rotate(-0 730.545652 679.551719)">2026-08</text>
+     </g>
+    </g>
+    <g id="xtick_24">
+     <g id="line2d_52">
+      <g>
+       <use xlink:href="#m6f3a0b0a98" x="875.553261" y="666" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_28">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: middle" x="875.553261" y="679.551719" transform="rotate(-0 875.553261 679.551719)">2026-10</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_8">
+    <g id="ytick_11">
+     <g id="line2d_53">
+      <path d="M 79.2 646.431614 
+L 954 646.431614 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_54">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="646.431614" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_29">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="649.707473" transform="rotate(-0 72.2 649.707473)">-10</text>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_55">
+      <path d="M 79.2 611.917769 
+L 954 611.917769 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_56">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="611.917769" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_30">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="615.193628" transform="rotate(-0 72.2 615.193628)">0</text>
+     </g>
+    </g>
+    <g id="ytick_13">
+     <g id="line2d_57">
+      <path d="M 79.2 577.403924 
+L 954 577.403924 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke: #e8edf4; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_58">
+      <g>
+       <use xlink:href="#ma17dba32de" x="79.2" y="577.403924" style="fill: #64748b; stroke: #64748b; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_31">
+      <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: end" x="72.2" y="580.679783" transform="rotate(-0 72.2 580.679783)">10</text>
+     </g>
+    </g>
+    <g id="text_32">
+     <text style="fill: #64748b; font: 10px 'PingFang HK'; text-anchor: middle" x="51.766875" y="610.671463" transform="rotate(-90 51.766875 610.671463)">万韩元 / 股 / 月²</text>
+    </g>
+   </g>
+   <g id="line2d_59">
+    <path d="M 221.830435 612.515894 
+L 295.522826 589.004103 
+L 362.083696 630.365174 
+L 438.153261 613.774155 
+L 509.468478 582.281013 
+L 578.406522 640.925372 
+L 654.476087 612.78027 
+L 728.168478 602.926933 
+L 801.86087 622.450259 
+L 873.176087 613.425192 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke: #2563eb; stroke-width: 1.7; stroke-linecap: square"/>
+    <g clip-path="url(#p8f8ee75aa7)">
+     <use xlink:href="#m8f12e8d289" x="221.830435" y="612.515894" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="295.522826" y="589.004103" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="362.083696" y="630.365174" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="438.153261" y="613.774155" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="509.468478" y="582.281013" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="578.406522" y="640.925372" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="654.476087" y="612.78027" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="728.168478" y="602.926933" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="801.86087" y="622.450259" style="fill: #2563eb; stroke: #2563eb"/>
+     <use xlink:href="#m8f12e8d289" x="873.176087" y="613.425192" style="fill: #2563eb; stroke: #2563eb"/>
+    </g>
+   </g>
+   <g id="line2d_60">
+    <path d="M 221.830435 613.001193 
+L 295.522826 586.762373 
+L 362.083696 631.298611 
+L 438.153261 614.287365 
+L 509.468478 560.372794 
+L 578.406522 660.970133 
+L 654.476087 606.393348 
+L 728.168478 620.937693 
+L 801.86087 616.174068 
+L 873.176087 607.190815 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke: #0d9488; stroke-width: 1.7; stroke-linecap: square"/>
+    <g clip-path="url(#p8f8ee75aa7)">
+     <use xlink:href="#mb7adf3f6cd" x="221.830435" y="613.001193" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="295.522826" y="586.762373" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="362.083696" y="631.298611" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="438.153261" y="614.287365" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="509.468478" y="560.372794" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="578.406522" y="660.970133" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="654.476087" y="606.393348" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="728.168478" y="620.937693" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="801.86087" y="616.174068" style="fill: #0d9488; stroke: #0d9488"/>
+     <use xlink:href="#mb7adf3f6cd" x="873.176087" y="607.190815" style="fill: #0d9488; stroke: #0d9488"/>
+    </g>
+   </g>
+   <g id="line2d_61">
+    <path d="M 79.2 611.917769 
+L 954 611.917769 
+" clip-path="url(#p8f8ee75aa7)" style="fill: none; stroke-dasharray: 3.33,1.44; stroke-dashoffset: 0; stroke: #94a3b8; stroke-width: 0.9"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 79.2 666 
+L 79.2 555.342927 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 79.2 666 
+L 954 666 
+" style="fill: none; stroke: #dbe2ec; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_33">
+    <text style="fill: #2563eb; font: 9px 'PingFang HK'; text-anchor: start" x="881.176087" y="623.425192" transform="rotate(-0 881.176087 623.425192)">-0.44</text>
+   </g>
+   <g id="text_34">
+    <text style="fill: #0d9488; font: 9px 'PingFang HK'; text-anchor: start" x="881.176087" y="599.190815" transform="rotate(-0 881.176087 599.190815)">+1.37</text>
+   </g>
+   <g id="text_35">
+    <text style="fill: #0f172a; font: 700 12px 'PingFang HK'; text-anchor: start" x="79.2" y="545.342927" transform="rotate(-0 79.2 545.342927)">04  EPS 二阶导：相邻月份一阶导的变化</text>
+   </g>
+  </g>
+  <g id="text_36">
+   <text style="fill: #0f172a; font: 700 23px 'PingFang HK'; text-anchor: start" x="79.2" y="-81.9" transform="rotate(-0 79.2 -81.9)">SK 海力士｜EPS 预期及其一阶、二阶导</text>
+  </g>
+  <g id="text_37">
+   <text style="fill: #475569; font: 12px 'PingFang HK'; text-anchor: start" x="79.2" y="-54" transform="rotate(-0 79.2 -54)">000660 · KOSPI · 韩元  /  月频一致预期 · 固定财年 · 不含年度滚动</text>
+  </g>
+  <g id="text_38">
+   <text style="fill: #2563eb; font: 700 12px 'PingFang HK'; text-anchor: start" x="79.2" y="-15.3" transform="rotate(-0 79.2 -15.3)">2026年 EPS  35.39万韩元   ·   一阶导 +0.20万/月</text>
+  </g>
+  <g id="text_39">
+   <text style="fill: #0d9488; font: 700 12px 'PingFang HK'; text-anchor: start" x="543.6" y="-15.3" transform="rotate(-0 543.6 -15.3)">2027年 EPS  45.39万韩元   ·   一阶导 +1.25万/月</text>
+  </g>
+  <g id="text_40">
+   <text style="fill: #475569; font: 10px 'PingFang HK'; text-anchor: start" x="79.2" y="704.7" transform="rotate(-0 79.2 704.7)">数据截至：股价 2026-10-19 ｜ EPS 2026-10-16 ｜ 月度导数 2026-09-30</text>
+  </g>
+  <g id="text_41">
+   <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: start" x="79.2" y="726.3" transform="rotate(-0 79.2 726.3)">一阶导 ≈ EPS本月 − EPS上月；二阶导 ≈ EPS本月 − 2×EPS上月 + EPS前月。按1个月为步长；缺月留空。</text>
+  </g>
+  <g id="text_42">
+   <text style="fill: #64748b; font: 9px 'PingFang HK'; text-anchor: start" x="79.2" y="745.2" transform="rotate(-0 79.2 745.2)">来源：FnGuide / WiseReport（EPS，按固定2026/2027财年分别计算）；Naver（日线）。10月未满月，不参与差分。</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p8bb2f421b9">
+   <rect x="79.2" y="22.5" width="874.8" height="145.601412"/>
+  </clipPath>
+  <clipPath id="pff992c83db">
+   <rect x="79.2" y="213.703774" width="874.8" height="133.953299"/>
+  </clipPath>
+  <clipPath id="paad0029c05">
+   <rect x="79.2" y="393.259435" width="874.8" height="116.48113"/>
+  </clipPath>
+  <clipPath id="p8f8ee75aa7">
+   <rect x="79.2" y="555.342927" width="874.8" height="110.657073"/>
+  </clipPath>
+ </defs>
+</svg>

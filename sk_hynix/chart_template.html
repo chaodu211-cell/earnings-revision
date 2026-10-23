@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SK 海力士 · 走势与盈利修正</title>
+<style>
+:root{color-scheme:light;--bg:#f3f5f9;--surface:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--teal:#0891b2;--price:#172033}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:auto;padding:28px 24px 36px}header{margin-bottom:20px}.eyebrow{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:600}h1{font-size:27px;line-height:1.35;letter-spacing:-.02em;margin:6px 0 8px;font-weight:750}h1 span{font-size:15px;font-weight:500;color:var(--muted);white-space:nowrap}.subtitle{margin:0;color:#334155;font-size:14px}.stamp{font-size:12px;color:var(--muted);margin-top:8px}
+.chart-fallback{width:100%;overflow:hidden}.chart-fallback svg{display:block;width:100%;height:auto}.chart-fallback[hidden]{display:none}#chart{display:none}.browser-note{font-size:12px;color:#64748b;padding:8px 10px 0;margin:0}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.card,.chart-panel,.notes{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 5px #0f172a03}.card{padding:16px 19px 17px;border-top:3px solid var(--price)}.card-label{font-size:12px;font-weight:600;color:#475569}.card-value{font-size:29px;line-height:1.4;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:3px}.card-value small{font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:5px}.card-meta{font-size:12px;color:var(--muted);min-height:20px}.card-detail{font-size:13px;border-top:1px solid #edf1f5;padding-top:9px;margin-top:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.card-detail b{font-variant-numeric:tabular-nums}.card-detail small{color:var(--muted);font-size:11px}.chart-panel{padding:14px 13px 8px;margin-bottom:18px}.chart-hint{padding:0 10px 8px;color:var(--muted);font-size:12px;border-bottom:1px solid #f1f5f9}#chart{width:100%;height:1110px}.notes{padding:17px 21px;color:#475569;font-size:12px}.notes p{margin:0 0 7px}.notes p:last-child{margin-bottom:0}.notes strong{color:#334155}.sources a{color:#2563eb;text-decoration:none;margin-right:13px}.sources a:hover{text-decoration:underline}.foot{margin:12px 2px 0;color:#94a3b8;font-size:11px}.empty{display:none;padding:30px 20px;text-align:center;color:var(--muted)}
+@media(max-width:700px){.wrap{padding:20px 12px 28px}h1{font-size:23px}h1 span{display:block;font-size:13px;margin-top:5px}.cards{grid-template-columns:1fr;gap:10px}.card{padding:12px 16px}.card-value{font-size:27px}.card-detail{margin-top:6px;padding-top:7px}.chart-panel{padding:10px 2px 5px}.chart-hint{padding-left:12px;font-size:11px}.notes{padding:15px 16px}#chart{height:1110px}}
+@media print{body{background:#fff}.wrap{padding:0;max-width:none}.card,.chart-panel,.notes{box-shadow:none;break-inside:avoid}.chart-hint{display:none}#chart{height:1050px}.foot{display:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">SK HYNIX · EARNINGS EXPECTATIONS</div>
+    <h1>SK 海力士 · 走势与盈利修正 <span>000660.KS · 韩元</span></h1>
+    <p class="subtitle">月频一致预期 · 固定财年 · 不含年度滚动</p>
+    <div class="stamp" id="stamp">/*STATIC_STAMP*/</div>
+  </header>
+  <section class="cards" id="cards" aria-label="最新股价与盈利预期">/*STATIC_CARDS*/</section>
+  <section class="chart-panel" aria-label="股价、盈利预期及EPS一阶导、二阶导四联图">
+    <div class="chart-hint" id="chart-hint">股价与 EPS 月度变化图已内嵌，可离线查看。圆点表示实际观测。</div>
+    <div class="chart-fallback" id="chart-fallback">/*STATIC_CHART*/</div>
+    <div id="chart" role="img" aria-label="SK 海力士股价及固定财年一致预期四联图"></div>
+    <div class="empty" id="empty">当前没有可用观测数据。</div>
+  </section>
+  <section class="notes" aria-label="数据口径与来源">
+    <p><strong>数据覆盖</strong>　<span id="coverage">/*STATIC_COVERAGE*/</span></p>
+    <p><strong>固定财年</strong>　2026 年与 2027 年预测分别比较同一财年，避免“今年 / 明年”标签切换产生机械变化。EPS 单位为万韩元，股价单位为韩元。</p>
+    <p><strong>EPS 一阶导</strong>　直接对图 2 同一财年的 EPS 做月度一阶差分：当月 EPS − 上月 EPS，单位为万韩元/月。<strong>EPS 二阶导</strong>为当月一阶差分 − 上月一阶差分，单位为万韩元/月²；表示 EPS 月度增量的变化。</p>
+    <p><strong>完整月差分</strong>　仅使用完整月末观测，同一财年分别计算；缺少相邻月份时留空。最新月内观测只显示在 EPS 曲线上，当月尚未结束，不计入一阶导、二阶导。月末标签对应当月可得的最后观测，悬停可查看实际观测日期。</p>
+    <p><strong>阅读方式</strong>　月频样本用于观察价格与盈利预期的变化，不展示拐点交易信号。曲线连接相邻观测用于阅读，不增加中间日期的数据。</p>
+    <p class="sources"><strong>来源</strong>　<span id="sources">/*STATIC_SOURCES*/</span></p>
+  </section>
+  <p class="foot">离线交互页面 · 内嵌数据与图表库 · 预测为分析师一致预期，后续可能调整</p>
+</main>
+<script>/*ECHARTS*/</script>
+<script>
+"use strict";
+try {
+const D = /*DATA*/;
+const $ = id => document.getElementById(id);
+const esc = x => String(x == null ? "" : x).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const finite = v => typeof v === "number" && Number.isFinite(v);
+const num = (v, n=2) => finite(v) ? v.toLocaleString("zh-CN", {minimumFractionDigits:n,maximumFractionDigits:n}) : "—";
+const pct = (v, suffix="%") => finite(v) ? `${v > 0 ? "+" : ""}${num(v*100,2)}${suffix}` : "—";
+const derivative = (v, unit) => finite(v) ? `${v > 0 ? "+" : ""}${num(v/10000,2)} ${unit}` : "—";
+const isoDay = v => /^\d{4}-\d{2}-\d{2}/.test(String(v || "")) ? String(v).slice(0,10) : null;
+const day = v => isoDay(v) || "—";
+const generated = String(D.generated || "");
+const fallbackDate = [D.price_asof, ...(D.targets || []).map(t => (t.latest || {}).date)].map(isoDay).filter(Boolean).sort().pop();
+const referenceMonth = (isoDay(generated) || fallbackDate || "").slice(0,7);
+const colors = ["#2563eb", "#0891b2", "#7c3aed", "#d97706"];
+const targets = (D.targets || []).map((t,i) => ({...t,color:colors[i%colors.length],name:`${t.year} 年`,
+  points:(t.points || []).filter(p => isoDay(p.date)).sort((a,b) => a.date.localeCompare(b.date)),
+  monthly:(t.monthly || []).filter(p => isoDay(p.date) && (!referenceMonth || p.date.slice(0,7) < referenceMonth)).sort((a,b) => a.date.localeCompare(b.date))
+}));
+const prices = (D.price || []).filter(p => Array.isArray(p) && isoDay(p[0]) && finite(p[1])).sort((a,b) => a[0].localeCompare(b[0]));
+$('stamp').textContent = `股价截至 ${day(D.price_asof)}　·　数据采集 ${String(D.fetched_at || '—').slice(0,16).replace('T',' ')}　·　页面生成 ${generated || "—"}`;
+$('coverage').textContent = D.coverage_note || "一致预期按可获得的月份观测展示。";
+const links = (D.source_links || []).filter(x => /^https?:\/\//.test(x.url || ""));
+$('sources').innerHTML = links.length ? links.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name || x.url)}</a>`).join("") : "FnGuide · Naver";
+const latestPrice = prices.length ? prices[prices.length-1] : null;
+const previousPrice = prices.length > 1 ? prices[prices.length-2] : null;
+const priceChange = latestPrice && previousPrice && previousPrice[1] > 0 ? latestPrice[1]/previousPrice[1]-1 : null;
+const cardHtml = [`<article class="card"><div class="card-label">最新收盘价</div><div class="card-value">${num(latestPrice && latestPrice[1],0)}<small>韩元</small></div><div class="card-meta">${day(latestPrice && latestPrice[0])}</div><div class="card-detail"><span>较前一交易日</span><b>${pct(priceChange)}</b></div></article>`];
+for (const t of targets) {
+  const L = t.latest || t.points[t.points.length-1] || {};
+  const supplied = t.derivative_latest || {};
+  const complete = t.monthly.concat(isoDay(supplied.date) && (!referenceMonth || supplied.date.slice(0,7) < referenceMonth) ? [supplied] : []).sort((a,b) => a.date.localeCompare(b.date));
+  const R = complete.length ? complete[complete.length-1] : {};
+  const current = referenceMonth && isoDay(L.date) && L.date.slice(0,7) >= referenceMonth;
+  cardHtml.push(`<article class="card" style="border-top-color:${t.color}"><div class="card-label">${esc(t.name)} EPS 一致预期</div><div class="card-value" style="color:${t.color}">${num(finite(L.eps)?L.eps/10000:null)}<small>万韩元</small></div><div class="card-meta">观测 ${day(L.date)}${current?" · 当月未满月":""}</div><div class="card-detail"><span>${isoDay(R.date)?esc(R.date.slice(0,7))+" 完整月":"最新完整月"}<br><small>月度一阶 / 二阶差分</small></span><b>一阶导 ${derivative(R.d_eps,"万韩元/月")}<br><small>二阶导 ${derivative(R.dd_eps,"万韩元/月²")}</small></b></div></article>`);
+}
+$('cards').innerHTML = cardHtml.join("");
+const allDates = prices.map(p => p[0]).concat(targets.reduce((dates,t) => dates.concat(t.points,t.monthly),[]).map(p => p.date)).filter(isoDay).sort();
+if (!allDates.length) {
+  $('chart').style.display = 'none';
+  $('empty').style.display = 'block';
+} else {
+  if (!window.echarts) throw new Error('Chart library unavailable');
+  $('chart').style.display = 'block';
+  const chart = echarts.init($('chart'),null,{renderer:'canvas'});
+  const showInteractive = () => {
+    if ($('chart').clientWidth > 0 && $('chart').querySelector('canvas,svg')) {
+      $('chart-fallback').hidden = true;
+      $('chart-hint').textContent = '四图共用时间轴与十字线；拖动底部滑块缩放，点击财年图例同步切换。圆点表示实际观测。';
+    }
+  };
+  chart.on('finished', showInteractive);
+  const meta = [], series = [];
+  const add = (config, info) => {meta.push(info);series.push(config)};
+  const line = (name,index,data,color,size=5) => ({name,type:'line',xAxisIndex:index,yAxisIndex:index,data,
+    showSymbol:true,symbol:'circle',symbolSize:size,connectNulls:false,smooth:false,
+    lineStyle:{width:2,color},itemStyle:{color,borderColor:'#fff',borderWidth:size>3?1.2:0},
+    emphasis:{focus:'series',scale:1.5},animation:false,clip:true});
+  add(line('股价',0,prices.map(p => ({value:p})), '#172033',2.3), {grid:0,label:'股价',unit:'韩元'});
+  for (const t of targets) {
+    add(line(t.name,1,t.points.map(p => ({value:[p.date,finite(p.eps)?p.eps/10000:null],raw:p})),t.color),{grid:1,label:t.name,unit:'万韩元'});
+  }
+  for (const t of targets) {
+    const s=line(t.name,2,t.monthly.map(p => ({value:[p.date,finite(p.d_eps)?p.d_eps/10000:null],raw:p})),t.color,5.5);
+    if (t===targets[0]) s.markLine={silent:true,symbol:'none',label:{show:false},lineStyle:{color:'#94a3b8',width:1,type:'dashed'},data:[{yAxis:0}]};
+    add(s,{grid:2,label:t.name,unit:'万韩元/月'});
+  }
+  for (const t of targets) {
+    const s=line(t.name,3,t.monthly.map(p => ({value:[p.date,finite(p.dd_eps)?p.dd_eps/10000:null],raw:p})),t.color,5.5);
+    if (t===targets[0]) s.markLine={silent:true,symbol:'none',label:{show:false},lineStyle:{color:'#94a3b8',width:1,type:'dashed'},data:[{yAxis:0}]};
+    add(s,{grid:3,label:t.name,unit:'万韩元/月²'});
+  }
+  const minDate=allDates[0],maxDate=allDates[allDates.length-1];
+  const monthlyDates=targets.reduce((dates,t)=>dates.concat(t.points.map(p=>p.date)),[]).sort();
+  const initialStart=monthlyDates.length?monthlyDates[0]:minDate;
+  const mobile=window.innerWidth<700;
+  const axis = i => ({type:'time',gridIndex:i,min:minDate,max:maxDate,boundaryGap:false,
+    axisLine:{show:false},axisTick:{show:false},splitLine:{show:true,lineStyle:{color:'#f1f5f9'}},
+    axisLabel:{color:'#94a3b8',fontSize:11,hideOverlap:true,formatter:value=>echarts.format.formatTime('yyyy-MM',value)},
+    axisPointer:{label:{show:i===3,formatter:p=>echarts.format.formatTime('yyyy-MM-dd',p.value),backgroundColor:'#334155'}}});
+  const yAxis = i => ({type:'value',gridIndex:i,scale:i<2,splitNumber:4,
+    axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#64748b',fontSize:11,
+      formatter:v=>i===0?num(v,0):num(v,1)},
+    splitLine:{lineStyle:{color:'#eaf0f6'}},axisPointer:{label:{show:false}}});
+  const headings=['① 股价 · 韩元','② 固定财年 EPS · 万韩元','③ EPS 一阶导','④ EPS 二阶导'];
+  const subheads=['韩国交易所日收盘价','相同目标财年，逐次观察一致预期','当月 EPS − 上月 EPS · 万韩元/月','当月一阶差分 − 上月一阶差分 · 万韩元/月²'];
+  const tops=[15,302,570,807];
+  const gridTops=[72,359,627,864], heights=[184,163,134,134];
+  chart.setOption({backgroundColor:'#fff',animation:false,color:colors,textStyle:{fontFamily:'-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif'},
+    title:headings.map((text,i)=>({text,subtext:subheads[i],left:mobile?12:22,top:tops[i],
+      textStyle:{fontSize:mobile?12:14,fontWeight:650,color:'#1e293b'},subtextStyle:{fontSize:11,color:'#94a3b8'},itemGap:7})),
+    legend:{data:targets.map(t=>t.name),top:mobile?46:17,right:mobile?13:24,itemWidth:19,itemHeight:9,icon:'roundRect',textStyle:{fontSize:12,color:'#475569'},selectedMode:true},
+    grid:gridTops.map((top,i)=>({left:mobile?75:96,right:mobile?20:38,top,height:heights[i],containLabel:false})),
+    xAxis:[0,1,2,3].map(axis),yAxis:[0,1,2,3].map(yAxis),
+    axisPointer:{link:[{xAxisIndex:'all'}],type:'line',lineStyle:{color:'#94a3b8',type:'dashed'},snap:false},
+    tooltip:{trigger:'axis',confine:true,axisPointer:{type:'cross',crossStyle:{color:'#94a3b8',type:'dashed'},label:{show:false}},backgroundColor:'rgba(255,255,255,.98)',borderColor:'#dce3ec',borderWidth:1,padding:[10,13],
+      textStyle:{color:'#334155',fontSize:12},extraCssText:'box-shadow:0 5px 20px rgba(15,23,42,.10);border-radius:9px;line-height:1.8',
+      formatter:ps=>{
+        const items=(Array.isArray(ps)?ps:[ps]).filter(p=>p&&meta[p.seriesIndex]);
+        if(!items.length)return '';
+        const when=echarts.format.formatTime('yyyy-MM-dd',items[0].axisValue);
+        let h=`<div style="font-weight:650;margin-bottom:4px;color:#0f172a">${when}</div>`,lastGrid=-1;
+        for(const p of items){
+          const m=meta[p.seriesIndex],raw=p.data&&p.data.raw,value=Array.isArray(p.value)?p.value[1]:null;
+          if(!finite(value))continue;
+          if(m.grid!==lastGrid){if(lastGrid!==-1)h+='<div style="height:5px"></div>';lastGrid=m.grid;}
+          h+=`${p.marker}${esc(m.label)}：<b>${num(value,m.grid===0?0:2)} ${m.unit}</b>`;
+          if(raw&&m.grid===1){
+            if(finite(raw.low)&&finite(raw.high))h+=`<span style="color:#94a3b8">　区间 ${num(raw.low/10000)}–${num(raw.high/10000)}</span>`;
+            if(referenceMonth&&raw.date.slice(0,7)>=referenceMonth)h+='<br><span style="color:#94a3b8">　当前月未满月，不计入差分</span>';
+          }
+          if(raw&&raw.observed_date)h+=`<br><span style="color:#94a3b8">　实际观测 ${esc(day(raw.observed_date))}</span>`;
+          h+='<br>';
+        }
+        return h;
+      }},
+    dataZoom:[{type:'inside',xAxisIndex:[0,1,2,3],filterMode:'none',startValue:initialStart,endValue:maxDate,zoomOnMouseWheel:'ctrl',moveOnMouseWheel:false},
+      {type:'slider',xAxisIndex:[0,1,2,3],filterMode:'none',bottom:24,height:26,startValue:initialStart,endValue:maxDate,
+       showDetail:false,borderColor:'#e2e8f0',backgroundColor:'#f8fafc',fillerColor:'rgba(37,99,235,.08)',dataBackground:{lineStyle:{color:'#cbd5e1'},areaStyle:{color:'#f1f5f9'}},handleStyle:{color:'#fff',borderColor:'#94a3b8'},textStyle:{color:'#94a3b8'}}],
+    series});
+  showInteractive();
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(()=>chart.resize());
+    observer.observe($('chart'));
+  } else {
+    window.addEventListener('resize',()=>chart.resize());
+  }
+  window.addEventListener('beforeprint',()=>chart.resize());
+  window.addEventListener('afterprint',()=>chart.resize());
+}
+} catch (error) {
+  document.getElementById('chart').style.display = 'none';
+  document.getElementById('chart-fallback').hidden = false;
+  document.getElementById('chart-hint').textContent = '当前显示内嵌预览图；使用浏览器打开可查看交互图。';
+}
+</script>
+</body>
+</html>

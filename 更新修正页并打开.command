@@ -1,5 +1,5 @@
 #!/bin/bash
-# 双击我：同步 GitHub 上的记录 → 抓新的 FactSet 周报和纳指行情 → 重算超额修正 / 速度拐点 → 打开「修正速度与纳指.html」
+# 双击我：同步 GitHub → 补抓 Yahoo 盈利快照 → 抓周报和行情 → 重算并打开页面
 #
 # 网络走 Veee 的系统代理（自动读端口）。没开代理或数据源暂时连不上时，用本地已有数据照样重算并打开，
 # 页面顶上会写明数据截至哪天。
@@ -37,7 +37,7 @@ else
   echo "① ⚠️  没检测到系统代理（Veee 没开？）——FactSet / Yahoo 多半连不上，先用本地已有数据重算"
 fi
 
-# ---------- 同步 GitHub：Yahoo 快照、上修初期名单记录（early_log.csv）、逐日表现（early_px.csv）只由 GitHub Actions 每天写 ----------
+# ---------- 同步 GitHub：正式快照和名单记录由 Actions 写；本地补抓另存 yahoo_local/ ----------
 # 拉不下来（没开代理、网络慢、和本地改动冲突）就跳过，用本地已有数据照常生成
 echo
 if [ -d .git ] && [ "$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" = "main" ]; then
@@ -67,9 +67,21 @@ else
   echo "② 同步 GitHub：不在 main 分支，跳过"
 fi
 
+# ---------- Yahoo：先采集再重算；本地目录不与 GitHub 同名文件冲突 ----------
+echo
+echo "③ Yahoo 盈利快照：今天没有就本地补抓（约 1～3 分钟）"
+if "$PY" yahoo_snapshot.py --local >yahoo_snapshot.log 2>&1; then
+  export REV_YAHOO_FETCH="$(sed -n 's/^SNAPSHOT_STATUS \([^ ]*\).*/\1/p' yahoo_snapshot.log | tail -1)"
+  tail -3 yahoo_snapshot.log | sed 's/^/   /'
+else
+  export REV_YAHOO_FETCH=failed
+  echo "   ⚠️  Yahoo 盈利快照抓取失败，沿用已有快照："
+  tail -3 yahoo_snapshot.log | sed 's/^/      /'
+fi
+
 # ---------- 抓数据（失败不中断，用已有数据继续）----------
 echo
-echo "③ 抓新周报（只抓本地还没有的；FactSet 限流时会自动等）"
+echo "④ 抓新周报（只抓本地还没有的；FactSet 限流时会自动等）"
 NEW="$("$PY" fetch_factset.py --new 2>&1 | grep -E " hub|Traceback|Error")"
 if [ -n "$NEW" ]; then echo "$NEW" | sed 's/^/   /'; else echo "   没有新周报（本周的可能还没发布，下次双击会再试）"; fi
 
@@ -77,7 +89,7 @@ if [ -n "$NEW" ]; then echo "$NEW" | sed 's/^/   /'; else echo "   没有新周�
 
 # ---------- 重算 ----------
 echo
-echo "④ 重算"
+echo "⑤ 重算"
 set -o pipefail
 "$PY" parse_factset.py >/dev/null 2>run_err.log         || die "解析周报失败：$(tail -3 run_err.log)"
 echo "   周报解析完成（最新一期 $(tail -1 factset_weekly.csv | cut -d, -f1)）"
@@ -94,25 +106,14 @@ if grep -q PRICE_FALLBACK run_err.log; then
   grep PRICE_FALLBACK run_err.log | sed 's/^/      /'
 fi
 
-# ---------- Yahoo 成分股快照：每天一次，历史从 2026-10-02 起靠它积累 ----------
-echo
-if [ -d .git ]; then
-  echo "⑤ Yahoo 成分股快照：建了仓库后改由 GitHub Actions 每个交易日拍（只留一个写入方，免得两边各拍一份冲突），本地跳过"
-elif [ -f "yahoo/$(date +%F).csv" ]; then
-  echo "⑤ Yahoo 成分股快照：今天已拍过"
-else
-  echo "⑤ Yahoo 成分股快照（约半分钟）"
-  "$PY" yahoo_snapshot.py 2>/dev/null | head -1 | sed 's/^/   /' || echo "   快照失败（不影响页面）"
-fi
-
 # ---------- 打开 ----------
 echo
 [ -f 修正速度与纳指.html ] || die "没有生成 修正速度与纳指.html"
 echo "⑥ 打开网页"
 [ "$NO_OPEN" = "1" ] || open 修正速度与纳指.html || die "打不开，手动双击同目录的 修正速度与纳指.html"
 echo
-if grep -q PRICE_FALLBACK run_err.log; then
-  echo "⚠️  页面已生成，但行情更新有失败，请留意页面的数据截至日。此窗口可以关掉了。"
+if grep -q PRICE_FALLBACK run_err.log || [ "$REV_YAHOO_FETCH" = failed ]; then
+  echo "⚠️  页面已生成，但行情或 Yahoo 盈利快照更新有失败，请留意页面的数据截至日。日志：run_err.log、yahoo_snapshot.log。"
 else
   echo "✅ 完成。此窗口可以关掉了。"
 fi
