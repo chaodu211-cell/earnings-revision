@@ -83,6 +83,57 @@ def nasdaq(force=False):
     return nq
 
 
+# 「净下调但纳指上涨」的五类原因（2026-10-24 用户要求放到页面上）。
+# 区间 = 2011-07 以来修正（2016-12 以前超额修正、之后纯修正，清洗口径）连续 ≥ 6 周为负的 12 段；纳指 9 段涨、1 段平、2 段跌。
+# 主因 / 次因是按当时公开背景归纳的，没有用模型检验；概率 = (主因次数 + 1) ÷ (10 + 5)，10 段样本太少，只当大致排序。
+CAUSES = [
+    ("val", "估值扩张（利率、流动性）",
+     "盈利预期在下调，但利率下行或央行转鸽，市盈率抬升的幅度超过了盈利下调。"),
+    ("mild", "轻度负值本身就是常态",
+     "分析师通常年初偏乐观、边走边调低（逐步下调）；读数在 −1% 左右、远期 EPS 照样上涨的时期，算不上利空。"),
+    ("lead", "价格先见底，下调后结束",
+     "股价先见底，分析师之后还要再下调 1~2 个月才见底，下调期的后半段往往已经处在反弹里——修正落后于价格。"),
+    ("policy", "政策预期先被定价，分析师等落地",
+     "政策没落地之前分析师的预测里不含它，股价却已经提前在涨；落地后才出现集中上修。"),
+    ("sector", "下调集中在纳指权重很小的行业",
+     "下调来自能源等在纳指里占比很小的行业，标普整体被拖累，纳指受影响小。"),
+]
+DOWNGRADE_EPISODES = [   # (起, 止, 主因, 次因, 背景)
+    ("2011-09-30", "2012-03-16", "val", ["lead"], "欧债、美债降级后估值跌到 10 倍；欧央行 LTRO、美联储扭曲操作"),
+    ("2013-01-25", "2013-03-01", "mild", [], "轻微下调，QE3 期间"),
+    ("2014-10-24", "2015-05-01", "sector", ["val"], "油价腰斩，下调集中在能源；利率下行"),
+    ("2017-01-27", "2017-06-02", "policy", ["mild"], "市场先定价特朗普减税，分析师等法案通过（2017-12）"),
+    ("2017-10-27", "2017-12-15", "mild", ["policy"], "减税法案还没落地"),
+    ("2018-11-09", "2019-05-17", "val", ["lead"], "减税高基数 + 贸易战；2019-01 美联储转鸽，利率大降"),
+    ("2019-07-26", "2020-08-07", "val", ["lead"], "2019 降息，2020 疫情后零利率 + QE；纳指 03-23 见底，下调到 05-22"),
+    ("2022-07-22", "2023-05-19", "lead", [], "通胀见顶、押注转向；纳指 2022-10 见底早于下调谷底（11-18）；ChatGPT 后 AI 行情"),
+    ("2023-11-10", "2024-04-19", "val", ["mild"], "2023-12 美联储释放降息信号；AI"),
+    ("2024-08-02", "2025-08-01", "mild", ["lead", "val"], "2024-09 起降息；2025-04 关税冲击，纳指 04-08 先见底"),
+    ("2012-09-21", "2012-11-16", None, [], "财政悬崖、大选（纳指下跌）"),
+    ("2015-10-09", "2016-05-13", None, [], "油价、强美元；2016 年初大跌后反弹（纳指下跌）"),
+]
+
+
+def causes_data(nq, fw):
+    """五类原因：概率与每个区间的纳指涨跌、远期 EPS、市盈率（区间数字按数据现算，归属是写死的判断）。"""
+    fw = fw.set_index("date").sort_index()
+    eps, pe, ix = fw.fwd_eps_clean.interpolate(limit_area="inside"), fw.fpe, nq["^IXIC"].dropna()
+    eps_ = []
+    for a, b, main, sub, note in DOWNGRADE_EPISODES:
+        A, B = pd.Timestamp(a) - pd.Timedelta(days=1), pd.Timestamp(b)
+        eps_.append({"a": a, "b": b, "main": main, "sub": sub, "note": note,
+                     "nq": round(100 * (ix.asof(B) / ix.asof(A) - 1), 1), "eps": round(100 * (eps.asof(B) / eps.asof(A) - 1), 1),
+                     "pe0": round(float(pe.asof(A)), 1), "pe1": round(float(pe.asof(B)), 1)})
+    up = [e for e in eps_ if e["main"]]
+    cats = []
+    for k, name, text in CAUSES:
+        n_main = sum(e["main"] == k for e in up)
+        n_any = sum(e["main"] == k or k in e["sub"] for e in up)
+        cats.append({"k": k, "name": name, "text": text, "n_main": n_main, "n_any": n_any, "n": len(up),
+                     "p": round(100 * (n_main + 1) / (len(up) + len(CAUSES)))})
+    return {"cats": cats, "episodes": eps_}
+
+
 HS = (0.0, 0.5, 1.0, 1.5, 2.0)  # 0 = 不去噪：状态翻转就是二阶导穿过 0 的那一周
 CODE = {"上修加速": "A", "上修减速": "B", "下修加速": "C", "下修放缓": "D"}
 
@@ -165,6 +216,7 @@ def main():
                      "nasdaq_fetch": NASDAQ_STATUS["state"],
                      "yahoo": data["breadth"]["latest"]["date"] if data["breadth"] else None,
                      "yahoo_fetch": os.environ.get("REV_YAHOO_FETCH", "not_requested")}
+    data["causes"] = causes_data(nq, fw)
     data["method"] = {"growth_history": "recorded_asof_forward_only",
                       "growth_backfill": False, "changed": "2026-10-19"}
 
@@ -274,6 +326,19 @@ tr.sep td { border-bottom: 2px solid var(--border); }
 th:first-child, td:first-child { text-align: left; }
 .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
 #brchart { width: 100%; height: 250px; }
+.cause { padding: 12px 0; border-top: 1px solid var(--grid); }
+.cause:first-of-type { border-top: 0; }
+.cause .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cause .p { font-size: 20px; font-weight: 700; color: var(--pos); font-variant-numeric: tabular-nums; min-width: 52px; }
+.cause .nm { font-weight: 600; color: var(--ink); }
+.cause .ct { color: var(--ink-3); font-size: 12px; }
+.cause .tx { color: var(--ink-2); font-size: 13px; margin: 4px 0 8px; }
+.eps-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.ep { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+      background: var(--pos); color: #fff; border: 1px solid var(--pos); }
+.ep.sub { background: transparent; color: var(--pos); }
+.ep.neg { background: transparent; color: var(--ink-2); border-color: var(--border); }
+.ep:hover { filter: brightness(1.08); box-shadow: 0 1px 4px rgba(15,23,42,0.18); }
 .note { color: var(--ink-2); font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--pos); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
 .note b { color: var(--ink); }
 #ea-sum { border-left-color: var(--earn); }
@@ -362,6 +427,13 @@ th:first-child, td:first-child { text-align: left; }
     </div>
   </section>
 
+  <section class="card" id="causes">
+    <h2>净下调但纳指上涨：五类原因</h2>
+    <div class="note" id="cs-intro"></div>
+    <div id="cs-list"></div>
+    <p class="fresh" id="cs-foot" style="margin:8px 0 0"></p>
+  </section>
+
   <section class="card" id="early" style="display:none">
     <h2>上修初期名单（前瞻跟踪）</h2>
     <div class="note" id="ea-sum"></div>
@@ -385,7 +457,7 @@ const sfmt = (v, d = 1) => `<span class="${tone(v == null ? v : +Number(v).toFix
 const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
 const TIP = "border-radius:10px;padding:9px 12px;box-shadow:0 8px 24px rgba(15,23,42,0.14);";
 const day = t => new Date(t).toISOString().slice(0, 10);
-const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, marks: "swing", ticks: [], brn: "90" };
+const state = { src: "rt", idx: "^IXIC", scale: "log", win: 8, h: 1, marks: "swing", ticks: [], brn: "90", hl: null };
 const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
 // weekly 行里的列：清洗口径 x13 在 1、二阶导在 4/5/6；实时口径 x13 在 7、二阶导在 8/9/10；待核实提示在 11
 const COL = { clean: { x: 1, a: { 4: 4, 8: 5, 13: 6 } }, rt: { x: 7, a: { 4: 8, 8: 9, 13: 10 } } }, FLAG = 11;
@@ -734,6 +806,9 @@ function option() {
     series: [
       { name, type: "line", xAxisIndex: 0, yAxisIndex: 0, data: PX[state.idx], showSymbol: false,
         lineStyle: { width: 1.6, color: css("--price") }, itemStyle: { color: css("--price") },
+        markArea: state.hl ? { silent: true, itemStyle: { color: alpha(neg, 0.13) },
+          label: { show: true, position: "insideTop", color: ink2, fontSize: 11, formatter: state.hl.label },
+          data: [[{ xAxis: tsOf(state.hl.a) }, { xAxis: tsOf(state.hl.b) }]] } : undefined,
         areaStyle: { origin: "start", color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(pos, 0.16) }, { offset: 1, color: alpha(pos, 0) }]) } },
       mark(mUp, true, pos),
       mark(mDn, false, neg),
@@ -797,6 +872,7 @@ function render(keepZoom = true) {
   tiles();
   legend();
   brRender();
+  csRender();
   eaRender();
 }
 
@@ -823,6 +899,43 @@ seg("#hys", v => { state.h = +v; render(); });
 seg("#range", v => setRange(v));
 seg("#marks", v => { state.marks = v; render(); });
 seg("#brwin", v => { state.brn = v; brRender(); });
+// ---------- 净下调但纳指上涨：五类原因 ----------
+function csRender() {
+  const C = D.causes;
+  if (!C) { $("#causes").style.display = "none"; return; }
+  const E = C.episodes, n = C.cats[0].n, up = E.filter(e => e.main);
+  $("#cs-intro").innerHTML = `2011-07 以来，修正（2016-12 以前为超额修正，之后为纯修正）连续 6 周以上为负的区间共 ${E.length} 段，`
+    + `纳指在其中 ${up.filter(e => e.nq > 2).length} 段上涨、${up.filter(e => e.nq <= 2).length} 段基本持平、${E.length - up.length} 段下跌。`
+    + `下面是对上涨 / 持平的 ${n} 段的归因：概率按主因次数平滑计算 =（主因次数 + 1）÷（${n} + ${C.cats.length}）。`
+    + `<br>点区间按钮跳到主图上对应的行情（红色底标出区间）；实心 = 主因，空心 = 次因。`;
+  const btn = (e, cls) => `<button class="ep ${cls}" data-a="${e.a}" data-b="${e.b}" title="${e.note}；纳指 ${sfmtPlain(e.nq)}，远期 EPS ${sfmtPlain(e.eps)}，市盈率 ${e.pe0} → ${e.pe1}">`
+    + `${e.a.slice(0, 7)} → ${e.b.slice(0, 7)}　纳指 ${sfmtPlain(e.nq)}</button>`;
+  $("#cs-list").innerHTML = C.cats.map(c => {
+    const own = E.filter(e => e.main === c.k).map(e => btn(e, "")), sub = E.filter(e => e.sub.includes(c.k)).map(e => btn(e, "sub"));
+    return `<div class="cause"><div class="hd"><span class="p">约 ${c.p}%</span><span class="nm">${c.name}</span>`
+      + `<span class="ct">主因 ${c.n_main}/${c.n}，出现过 ${c.n_any}/${c.n}</span></div>`
+      + `<div class="tx">${c.text}</div><div class="eps-btns">${own.concat(sub).join("")}</div></div>`;
+  }).join("") + `<div class="cause"><div class="hd"><span class="nm">对照：净下调且纳指下跌</span></div>`
+    + `<div class="eps-btns">${E.filter(e => !e.main).map(e => btn(e, "neg")).join("")}</div></div>`;
+  $("#cs-foot").textContent = "区间数字（纳指涨跌、远期 EPS、市盈率）按数据现算；主因 / 次因是按当时公开背景的归纳，没有用模型检验。"
+    + "各类常同时存在，按主因分配才加起来为 100%。10 段样本里每一段归错就差约 7 个百分点，只当大致排序看。悬停按钮看背景。";
+}
+const sfmtPlain = v => (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+function jumpTo(a, b, label) {
+  state.hl = { a, b, label };
+  render(false);
+  const pad = 45 * 864e5;
+  quiet = true;
+  chart.dispatchAction({ type: "dataZoom", startValue: tsOf(a) - pad, endValue: Math.min(tsOf(b) + pad, X1) });
+  quiet = false;
+  $("#range").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
+  chart.getDom().scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("#cs-list").addEventListener("click", e => {
+  const b = e.target.closest("button.ep"); if (!b) return;
+  jumpTo(b.dataset.a, b.dataset.b, `净下调 ${b.dataset.a} → ${b.dataset.b}`);
+});
+
 // ---------- 上修广度 ----------
 let brchart = null;
 function brRender() {
