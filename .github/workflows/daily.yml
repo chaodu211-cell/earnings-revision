@@ -89,6 +89,8 @@ jobs:
       built: ${{ steps.site.outputs.built }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       # 不开 cache: pip —— 仓库没有 requirements.txt，开了会直接报错
       - uses: actions/setup-python@v5
@@ -127,7 +129,8 @@ jobs:
       # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。北京日期与美东相同时（北京 21:00~24:00 手动补跑）照拍。
       - name: ① Yahoo 成分股快照
         id: snap
-        if: ${{ !cancelled() && github.event_name != 'push' }}   # 先拍快照，再计算当次页面；快照失败仍用历史数据重算
+        # 显式刷新提交也拍快照；普通代码推送仍只重建页面。
+        if: ${{ !cancelled() && (github.event_name != 'push' || contains(github.event.head_commit.message, '[refresh-data]')) }}
         continue-on-error: true
         run: |
           set -o pipefail
@@ -235,6 +238,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: _site
 
       # 快照历史只增不改，必须跨运行保存。推送失败会让本次运行标红（GitHub 会发邮件）；页面发布不受影响。
@@ -288,3 +292,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
