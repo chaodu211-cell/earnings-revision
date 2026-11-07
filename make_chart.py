@@ -681,6 +681,10 @@ const MARK_TXT = {
 };
 
 const chart = echarts.init($("#chart"), null, { renderer: "canvas" });
+// ECharts 会拦截图内滚轮的默认行为，提前截住事件，让浏览器滚动页面。
+for (const type of ["wheel", "mousewheel"]) {
+  chart.getDom().addEventListener(type, event => event.stopPropagation(), { capture: true, passive: true });
+}
 
 // 实时口径里当时没有新读数的周（FactSet 停刊 / 待核实 / 没写市盈率）：画事后补的值，空心柱，不进信号
 const XF = 17, ISSUED = 18, SPL = 19;   // SPL：2016-12 以前接上去的超额修正
@@ -794,7 +798,7 @@ function option() {
       pctAxis(1), pctAxis(2, cap), pctAxis(3, capD),
     ],
     dataZoom: [
-      { type: "inside", xAxisIndex: [0, 1, 2, 3], filterMode: "filter" },
+      { type: "inside", xAxisIndex: [0, 1, 2, 3], filterMode: "filter", zoomOnMouseWheel: false },
       { type: "slider", xAxisIndex: [0, 1, 2, 3], bottom: 6, height: 22, filterMode: "filter",
         borderColor: border, borderRadius: 6, backgroundColor: "transparent", fillerColor: css("--band"),
         handleStyle: { color: css("--surface"), borderColor: pos }, moveHandleStyle: { color: alpha(pos, 0.35) },
