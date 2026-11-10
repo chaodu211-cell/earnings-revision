@@ -3,13 +3,12 @@ name: daily
 # 盈利修正 · 修正速度与纳指：每个美股交易日自动重算，发布到 GitHub Pages。
 #
 # 分工：GitHub 负责算，Claude 负责推送。
-#   · 本工作流：北京时间 19:23 左右（周一至周五）抓新周报和纳指 → 重算 → 页面发布到
+#   · 本工作流：北京时间工作日抓新周报和纳指 → 重算 → 页面发布到
 #     https://chaodu211-cell.github.io/earnings-revision/ ，同目录另有 status.json（各数据截至日、抓取是否成功）。
 #   · Claude 的定时任务：北京时间 20:50 读取上面那个页面，更新 Artifact，推送到手机。
 #
-# 准时由外部负责：2026-10 起 GitHub 的定时触发常晚 6 小时以上（10-06、10-07 北京次日 01:16、01:51 才到，
-# 正赶上美股盘中，Yahoo 快照也被记到了第二天的日期上）。所以每个工作日北京 19:18 由 Claude 定时任务
-# 手动运行（workflow_dispatch）本工作流；cron 只作兜底，晚到时若今天的页面和快照都已发布就整趟跳过。
+# Actions 的 cron 曾晚到数小时。主运行提前，另设两个错开整点的补跑。
+# 仍可用 workflow_dispatch 手动触发；定时补跑按线上数据截止日判断是否跳过。
 #
 # txt/（FactSet 周报原文，版权内容）不进 git，仓库里只有本地全量解析出来的 factset_weekly.csv。
 # 这里每次只抓 CSV 最新一期之后的周报（fetch_factset.py --since-csv），追加解析（parse_factset.py --incremental），
@@ -17,10 +16,13 @@ name: daily
 # 算出来的页面和中间文件只发布、不提交；提交回 main 的只有 Yahoo 成分股快照（只由这里写，每个交易日一份）。
 on:
   schedule:
-    # 11:23 UTC = 北京 19:23 = 美东 07:23（夏令时）/ 06:23（冬令时）：前一交易日收盘已齐，
-    # 离 Claude 20:50 读取约一个半小时（GitHub 定时任务常晚 10~60 分钟）。分钟错开整点，也错开最优拟合的 11:07。
-    # FactSet 周报美东周五白天才发，所以周五那期在下周一这次进页面。
-    - cron: "23 11 * * 1-5"
+    # 纽约时间：周日至周四 22:23（北京已是下个工作日）主更新；周一至周五 03:43、06:23 补跑。
+    - cron: "23 22 * * 0-4"
+      timezone: "America/New_York"
+    - cron: "43 3 * * 1-5"
+      timezone: "America/New_York"
+    - cron: "23 6 * * 1-5"
+      timezone: "America/New_York"
   # 代码合进 main 就重建页面（只改文档不触发）；这种运行不拍 Yahoo 快照
   push:
     branches: [main]
@@ -37,10 +39,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 定时运行先看线上 status.json：今天 11:00 UTC（北京 19:00）之后已有一次行情下载成功的发布，
-  # 并且这次跑了也拍不了快照（main 上已有北京今天的 yahoo/ 文件，或者快照步骤的盘中闸门此刻会拦），就跳过。
-  # 不看 status.json 的 event / snapshot：晚上推一次代码，push 那次发布会把它们改成 push / skipped。
-  # 代码推送、手动运行不拦；读不到 status.json 时照跑（宁可多跑一次）。
+  # 定时补跑检查线上纳指收盘日、行情抓取状态和今天的 Yahoo 快照。
+  # 代码推送和手动运行照常；读不到状态时照跑。
   check:
     runs-on: ubuntu-latest
     outputs:
@@ -49,6 +49,7 @@ jobs:
       - if: ${{ github.event_name == 'schedule' }}
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref_name }}
           sparse-checkout: yahoo
       - id: check
         if: ${{ github.event_name == 'schedule' }}
@@ -56,21 +57,24 @@ jobs:
           curl -fsS --retry 3 "https://chaodu211-cell.github.io/earnings-revision/status.json?t=$(date +%s)" -o status.json || exit 0
           python3 - <<'PY'
           import json, os
-          from datetime import datetime, timezone
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
           st = json.load(open("status.json", encoding="utf-8"))
-          now = datetime.now(timezone.utc)
-          cutoff = now.replace(hour=11, minute=0, second=0, microsecond=0)   # 当天 11:00 UTC = 北京 19:00
-          # generated 是北京时间 "YYYY-MM-DD HH:MM"（build 作业设了 TZ=Asia/Shanghai）
-          gen = datetime.strptime(st["generated"], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
-          bj, et = now.astimezone(ZoneInfo("Asia/Shanghai")), now.astimezone(ZoneInfo("America/New_York"))
+          now = datetime.now(ZoneInfo("America/New_York"))
+          expected = now.date()
+          if (now.hour, now.minute) < (16, 30):
+              expected -= timedelta(days=1)
+          # 周末回退到周五；遇交易所假日或源数据未齐时，保留补跑机会。
+          while expected.weekday() >= 5:
+              expected -= timedelta(days=1)
+          bj = now.astimezone(ZoneInfo("Asia/Shanghai"))
           snap_done = os.path.exists(f"yahoo/{bj:%Y-%m-%d}.csv")
-          # 与快照步骤的盘中闸门同一条件
-          blocked = et.weekday() < 5 and 900 <= et.hour * 100 + et.minute < 1630 and bj.date() != et.date()
-          skip = gen >= cutoff and bool(st.get("prices_ok")) and (snap_done or blocked)
-          print(f"线上 status.json：生成于 {st['generated']}（{st.get('event')}），行情 {st.get('prices_ok')}；"
-                f"北京 {bj:%m-%d} 的快照{'已有' if snap_done else '还没有'}，盘中闸门{'会拦' if blocked else '不拦'} → "
-                + ("今天的已发布，跳过" if skip else "照跑"))
+          # 与定时快照步骤的闸门一致。
+          blocked = bj.weekday() >= 5 or (now.weekday() < 5 and 900 <= now.hour * 100 + now.minute < 1630)
+          nasdaq = st.get("nasdaq") or ""
+          skip = bool(st.get("prices_ok")) and nasdaq >= expected.isoformat() and (snap_done or blocked)
+          print(f"线上纳指截至 {nasdaq}，预期至少 {expected}；北京 {bj:%m-%d} 的快照"
+                f"{'已有' if snap_done else '还没有'} → " + ("已发布，跳过" if skip else "继续更新"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"skip={'true' if skip else 'false'}\n")
           PY
@@ -124,9 +128,8 @@ jobs:
             echo "::warning::sectors.json 下载失败，Yahoo 快照可能无法更新，上修广度表不显示行业"
           fi
 
-      # 盘中闸门（2026-10-08 加）：美东工作日 09:00~16:30、且北京已经是第二天时不拍。快照按北京日期命名、每天只拍一次，
-      # 2026-10-06/07 GitHub 定时运行晚到北京次日凌晨（美东盘中）才跑，前一天盘中的数据记成了次日的快照，
-      # 次日 19:23 那次就以「已拍过」跳过，正常的盘前快照再也拍不到。北京日期与美东相同时（北京 21:00~24:00 手动补跑）照拍。
+      # 定时任务晚到盘中或北京时间周末时不拍 Yahoo 快照，避免抢占下次盘前的日期。
+      # 手动和显式刷新保留原规则：美东盘中且北京日期已领先时才拦。
       - name: ① Yahoo 成分股快照
         id: snap
         # 显式刷新提交也拍快照；普通代码推送仍只重建页面。
@@ -136,9 +139,14 @@ jobs:
           set -o pipefail
           if [ -f "yahoo/$(date +%F).csv" ]; then echo "今天（$(date +%F)）已拍过"; exit 0; fi
           ET_DOW=$(TZ=America/New_York date +%u); ET_HM=$(TZ=America/New_York date +%H%M)
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date +%u)" -gt 5 ]; then
+            echo "北京 $(date +%F) 是周末，跳过定时快照"
+            echo "guard=weekend" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "$ET_DOW" -le 5 ] && [ "$((10#$ET_HM))" -ge 900 ] && [ "$((10#$ET_HM))" -lt 1630 ] \
-             && [ "$(date +%F)" != "$(TZ=America/New_York date +%F)" ]; then
-            echo "美东 $(TZ=America/New_York date '+%a %H:%M') 是美股盘中、北京已是 $(date +%F)，不拍（这天的快照留给北京 19:23 盘前那次）"
+             && { [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$(date +%F)" != "$(TZ=America/New_York date +%F)" ]; }; then
+            echo "美东 $(TZ=America/New_York date '+%a %H:%M')，跳过盘中快照"
             echo "guard=market_hours" >> "$GITHUB_OUTPUT"
             exit 0
           fi
