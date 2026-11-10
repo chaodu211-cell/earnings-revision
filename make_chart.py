@@ -8,7 +8,7 @@
         纳指上标出速度见顶的红蓝三角（点击看详情）；最下面一张把标普500 13 周涨跌拆成 盈利（远期 EPS）+ 估值（远期市盈率），
         右上角写当前是盈利抬升还是估值抬升。
   再下：上修初期名单（early.py）——近 30 天刚开始上修、分析师一致上调的公司，按股价分「双确认 / 股价未动」两组，每天记录、分组跟踪。
-  图下：上修广度（breadth.py，Yahoo 成分股快照）——上修前 5 的公司、按市值分组（近 30 / 60 / 90 天切换）、每 30 天前 10 大 vs 其余；快照满 5 天后加每日走势。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
+  图下：上修广度（breadth.py，Yahoo 成分股快照）——行业排名、上修前 5 的公司、按市值分组（近 30 / 60 / 90 天切换）、每 30 天前 10 大 vs 其余；快照满 5 天后加每日走势。阶段 / 确认点 / 事后高低点取自 speed.py，两种口径 × 窗口 N × 去噪阈值 h 全部内嵌，页面上切换。
         （原来的下半部分「速度拐点 × 纳指」收益率分析 2026-10-04 按用户要求删了；统计结论仍在 说明.md、speed.py。）
 单文件、离线可开（ECharts 5.6.0 内嵌，vendor/echarts.min.js，Apache-2.0；对数轴自定义刻度要 ≥5.6）。
 
@@ -314,7 +314,7 @@ h2::before { content: ""; width: 4px; height: 16px; border-radius: 2px; backgrou
 h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
 .br-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin-top: 12px; }
 .br-grid > div { min-width: 0; }
-.br-grid > div:last-child { grid-column: 1 / -1; }
+.br-grid > div:first-child, .br-grid > div:last-child { grid-column: 1 / -1; }
 @media (max-width: 860px) { .br-grid { grid-template-columns: minmax(0, 1fr); } }
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -324,6 +324,8 @@ th { color: var(--ink-2); font-weight: 500; font-size: 12px; background: var(--s
 tr:hover td { background: var(--surface-2); }
 tr.sep td { border-bottom: 2px solid var(--border); }
 th:first-child, td:first-child { text-align: left; }
+#br-sector th:first-child { width: 3em; }
+#br-sector th:nth-child(2), #br-sector td:nth-child(2) { text-align: left; }
 .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
 #brchart { width: 100%; height: 250px; }
 .cause { padding: 12px 0; border-top: 1px solid var(--grid); }
@@ -412,13 +414,15 @@ th:first-child, td:first-child { text-align: left; }
     <div class="note" id="br-verdict"></div>
     <p class="fresh" id="br-sub" style="margin:4px 0 0"></p>
     <div class="bar" style="margin:14px 0 0">
-      <span class="grp">下面两张表的时间窗
+      <span class="grp">下面三张表的时间窗
         <span class="seg" id="brwin">
           <button data-v="30" aria-pressed="false">近 30 天</button><button data-v="60" aria-pressed="false">近 60 天</button><button data-v="90" aria-pressed="true">近 90 天</button>
         </span>
       </span>
     </div>
     <div class="br-grid">
+      <div><h3 id="br-sector-h">行业排名</h3><div class="tbl-wrap"><table id="br-sector" aria-labelledby="br-sector-h"></table></div>
+        <p class="fresh" id="br-sector-note" style="margin:6px 0 0" hidden></p></div>
       <div><h3 id="br-top-h">上修前 5 的公司（按贡献的上修金额）</h3><div class="tbl-wrap"><table id="br-top"></table></div></div>
       <div><h3 id="br-size-h">按市值分组（近 90 天）</h3><div class="tbl-wrap"><table id="br-size"></table></div>
         <p class="fresh" id="br-size-note" style="margin:6px 0 0"></p></div>
@@ -960,8 +964,17 @@ function brRender() {
     + ` 上修前 5：${L.lead.map(x => x.co).join("、")}，合计占 ${pc(L.lead5_share)}。`;
   $("#br-verdict").innerHTML = verdict;
   $("#br-sub").textContent = `Yahoo 成分股快照 ${L.date}，${L.n} 家公司；全指数近 90 天纯修正 ${f(L.all)}（和中图同一口径）。前 10 大：${L.top10_names.join(" ")}。`;
-  // 两张表按选中的时间窗（近 30 / 60 / 90 天）
+  // 三张表按选中的时间窗（近 30 / 60 / 90 天）
   const n = state.brn, H = (L.by && L.by[n]) || L;
+  const sectors = H.sectors || [];
+  $("#br-sector-h").textContent = `行业排名（近 ${n} 天，按纯修正率）`;
+  $("#br-sector").innerHTML = `<thead><tr><th>排名</th><th>行业</th><th>公司数</th><th aria-sort="descending">${n} 天纯修正</th></tr></thead><tbody>`
+    + (sectors.length ? sectors.map((x, i) => `<tr><td>${x.rev == null ? "—" : i + 1}</td><td>${x.name}</td><td>${x.n}</td><td>${sfmt(x.rev, 2)}</td></tr>`).join("")
+                      : `<tr><td colspan="4" class="muted">暂无行业分类数据</td></tr>`)
+    + `</tbody>`;
+  const sectorNote = $("#br-sector-note"), covered = sectors.reduce((sum, x) => sum + x.n, 0);
+  sectorNote.hidden = covered === 0 || covered === L.n;
+  sectorNote.textContent = `行业分类覆盖 ${covered} / ${L.n} 家公司。`;
   $("#br-top-h").textContent = `${H.lead_dir}前 5 的公司（近 ${n} 天，按贡献的${H.lead_dir}金额）`;
   $("#br-top").innerHTML = `<tr><th>公司</th><th>市值排名</th><th>行业</th><th>${n} 天修正</th><th>占全部${H.lead_dir}金额</th></tr>`
     + H.lead.map(x => `<tr><td><b>${x.co}</b></td><td>${x.rank}</td><td>${x.sector || "—"}</td><td>${sfmt(x.rev)}</td><td>${pc(x.share)}</td></tr>`).join("")

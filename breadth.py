@@ -7,7 +7,7 @@
   盈利额 = 股本 × 远期 EPS；修正 = Σ盈利额(今天) / Σ盈利额(N 天前) − 1
   双重股权合并成一家公司（GOOG→GOOGL、FOX→FOXA、NWS→NWSA）；Yahoo 两个代码给的市值都是全公司的，所以市值用 股本 × 股价
   「前 10 大」按市值；「上修前 5」按贡献的上修金额（股本 × 远期 EPS 的 N 天变化）
-  上修前 5 和按市值分组各算近 30 / 60 / 90 天三套（by），页面上切换；顶层同名字段 = 90 天那套
+  行业排名、上修前 5 和按市值分组各算近 30 / 60 / 90 天三套（by），页面上切换；顶层同名字段 = 90 天那套
 
 广度走势：每个点 = 截至那天的近 30 天（前 10 大 / 其余公司的修正、全部公司的净广度）。最早那份快照还能算出 60、30 天前那两段，
   之后每份快照添一个点（当天往前 30 天）。净广度 = 修正 > +0.5% 的公司占比 − < −0.5% 的占比（百分点）。
@@ -93,7 +93,7 @@ def _p(v):
 
 
 def horizon(g, n):
-    """近 n 天（n = 30 / 60 / 90）：上修前 5（整体净下修时改列下修前 5）、按市值分组。权重、修正都以 n 天前的盈利额为基。"""
+    """近 n 天（n = 30 / 60 / 90）：行业排名、上修前 5（净下修时列下修前 5）、按市值分组。权重、修正都以 n 天前的盈利额为基。"""
     p, a = _p, f"E_{n}daysAgo"
     dE = g.E_current - g[a]
     rev = pd.Series(np.where(g[a] > 0, g.E_current / g[a] - 1, np.nan), index=g.index)
@@ -110,6 +110,12 @@ def horizon(g, n):
         out["size"].append({"name": name, "w": p(g.loc[m, a].sum() / g[a].sum()), "rev": p(_rev(g, m, a)),
                             "med": p(rr.median()), "up": p((rr > 0.01).mean()), "share": p(dE[m].sum() / tot) if tot else None,
                             **({"n": int(m.sum())} if name == "Mag 7" else {})})
+    sectors = [{"name": name, "n": len(members), "rev": _rev(g, members, a)}
+               for name, members in g.groupby("sector").groups.items() if name]
+    sectors.sort(key=lambda row: row["rev"] if row["rev"] is not None else -np.inf, reverse=True)
+    for row in sectors:
+        row["rev"] = p(row["rev"])
+    out["sectors"] = sectors
     return out
 
 
@@ -124,7 +130,7 @@ def summarize(day, g):
            "up": p((r > 0.01).mean()), "dn": p((r < -0.01).mean()), "med": p(r.median()),
            "top10_names": list(g.loc[top, "co"])}
     out["by"] = {str(n): horizon(g, n) for n in (30, 60, 90)}
-    out.update(out["by"]["90"])   # 顶层 lead / size 照旧是 90 天，给读页面数据的每日任务用
+    out.update(out["by"]["90"])   # 顶层沿用 90 天口径，给读页面数据的每日任务用
     out["win"] = []
     for a, b, name in (("E_90daysAgo", "E_60daysAgo", "90→60 天前"), ("E_60daysAgo", "E_30daysAgo", "60→30 天前"),
                        ("E_30daysAgo", "E_current", "近 30 天")):
