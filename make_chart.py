@@ -238,7 +238,7 @@ TEMPLATE = r"""<!doctype html>
   --bg: #f3f5f9; --surface: #ffffff; --surface-2: #f1f4f8; --border: #e2e7ee; --grid: #edf0f5;
   --ink: #0f172a; --ink-2: #475569; --ink-3: #8a96a8;
   --pos: #2563eb; --neg: #ef6327; --price: #1e293b; --band: rgba(37,99,235,0.10);
-  --earn: #0e9f77; --val: #8b5cf6; --warn: #d97706;
+  --earn: #0e9f77; --val: #8b5cf6; --warn: #d97706; --growth: #0f766e;
   --shadow: 0 1px 2px rgba(15,23,42,0.04), 0 6px 20px rgba(15,23,42,0.05);
   --glow: rgba(37,99,235,0.07);
 }
@@ -248,7 +248,7 @@ TEMPLATE = r"""<!doctype html>
     --bg: #0a0f1c; --surface: #111827; --surface-2: #1a2334; --border: #243047; --grid: #1b2537;
     --ink: #f1f5f9; --ink-2: #b4c0d3; --ink-3: #7a879d;
     --pos: #4b8df8; --neg: #f5793f; --price: #e2e8f0; --band: rgba(75,141,248,0.18);
-    --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524;
+    --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524; --growth: #5eead4;
     --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);
     --glow: rgba(75,141,248,0.10);
   }
@@ -258,7 +258,7 @@ TEMPLATE = r"""<!doctype html>
   --bg: #0a0f1c; --surface: #111827; --surface-2: #1a2334; --border: #243047; --grid: #1b2537;
   --ink: #f1f5f9; --ink-2: #b4c0d3; --ink-3: #7a879d;
   --pos: #4b8df8; --neg: #f5793f; --price: #e2e8f0; --band: rgba(75,141,248,0.18);
-  --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524;
+  --earn: #2fcf9c; --val: #a78bfa; --warn: #f5a524; --growth: #5eead4;
   --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.25);
   --glow: rgba(75,141,248,0.10);
 }
@@ -466,6 +466,7 @@ const NAME = { "^IXIC": "纳斯达克综合", "^NDX": "纳斯达克100" };
 // weekly 行里的列：清洗口径 x13 在 1、二阶导在 4/5/6；实时口径 x13 在 7、二阶导在 8/9/10；待核实提示在 11
 const COL = { clean: { x: 1, a: { 4: 4, 8: 5, 13: 6 } }, rt: { x: 7, a: { 4: 8, 8: 9, 13: 10 } } }, FLAG = 11;
 const XI = () => COL[state.src].x, AC = () => COL[state.src].a[state.win];
+const G_NEXT = 13, GROWTH_NAME = "预期明年 EPS 增速";
 // 标普 13 周涨跌在 15；远期 EPS 13 周变化：清洗口径在 2、实时口径在 16。涨跌 = 盈利 + 估值
 const EI = () => state.src === "rt" ? 16 : 2;
 function decomp(r) {
@@ -485,6 +486,7 @@ const S = () => D.speed[key()];
 
 const tsOf = s => Date.parse(s + "T00:00:00Z");
 const WK = D.weekly.map(r => [tsOf(r[0]), ...r.slice(1)]);
+const GROWTH = WK.map(r => [r[0], r[G_NEXT]]);
 // Yahoo 成分股快照算的全指数 90 天纯修正，每个交易日一点（FactSet 周报停刊 / 待核实时看它）
 const YD = (D.breadth && D.breadth.daily || []).filter(d => d.rev90 != null).map(d => [tsOf(d.date), d.rev90]);
 const ydAt = t => { let b = null; for (const p of YD) if (Math.abs(p[0] - t) <= 3.5 * 864e5 && (!b || Math.abs(p[0] - t) < Math.abs(b[0] - t))) b = p; return b; };
@@ -565,7 +567,7 @@ function legend() {
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink-2")}">▯</b>空心柱 = 当时没有新读数的周（FactSet 停刊 / 待核实），画事后补的值，不进信号</span>`;
   if (state.src === "rt") h += `<span><b class="mk" style="color:${css("--ink")}">◇</b>待核实周（中图；远期 EPS 单周变动 > 2%：有当周 Yahoo 快照就当场判真假，判不了才等下一期）</span>`;
   h += `<span class="muted">两种口径的增长率均只沿用截至当周已有的记录，不向历史回填</span>`;
-  if (SPL_END) h += `<span class="muted">2016-12 以前的浅色柱是超额修正（周报没写明年增速，纯修正算不出），大波段在接缝处重新起算（两段口径不同，不连着算）</span>`;
+  if (SPL_END) h += `<span class="muted">2016-12 以前的浅色柱是超额修正，明年增速记录不足以计算纯修正；大波段在接缝处重新起算</span>`;
   $("#legend").innerHTML = h;
   swingNote();
 }
@@ -715,7 +717,7 @@ function bars(col, pos, neg) {
 
 function option() {
   const ink = css("--ink"), ink2 = css("--ink-2"), ink3 = css("--ink-3"), border = css("--border"), grid = css("--grid");
-  const pos = css("--pos"), neg = css("--neg");
+  const pos = css("--pos"), neg = css("--neg"), growth = css("--growth");
   const name = NAME[state.idx];
   const M = markSets();
   LASTM = M;
@@ -725,7 +727,7 @@ function option() {
   const ax = { axisLine: { lineStyle: { color: border } }, axisTick: { show: false },
     axisLabel: { color: ink3, fontSize: 11 }, splitLine: { lineStyle: { color: grid } } };
   const G = [{ top: 50, height: "34.5%" }, { top: "46%", height: "12%" }, { top: "64.5%", height: "12%" }, { top: "83%", height: "10%" }]
-    .map(g => ({ left: 64, right: 24, ...g }));
+    .map(g => ({ left: 64, right: 48, ...g }));
   const xa = i => ({ type: "time", gridIndex: i, min: X0, max: X1, ...ax, splitLine: { show: false },
     axisLabel: i < 3 ? { show: false } : { color: ink3, fontSize: 11 } });
   // 涨跌拆分：2020 年 ±30% 会把全图压扁，纵轴同样截在 95 分位附近
@@ -749,7 +751,9 @@ function option() {
   return {
     animation: false,
     backgroundColor: "transparent",
-    title: [label(name, 4), label("纯修正（速度，%：13 周里分析师真正改了多少，已扣掉时间往前滚的部分）", "43%"),
+    title: [label(name, 4),
+            { ...label("纯修正（左） {g|━ 明年EPS增速（右）}", "43%"),
+              textStyle: { color: ink, fontSize: 11, fontWeight: 600, rich: { g: { color: growth } } } },
             label(`二阶导：纯修正 ${state.win} 周变化（加速度，%；${state.h > 0 ? `虚线 = ±${state.h} 去噪阈值；` : ""}全图纵轴截在 ±${cap}%）`, "61.5%"),
             { text: `标普500 13 周涨跌拆分（对数 %）：{e|■} 盈利（远期 EPS）  {v|■} 估值（远期市盈率）  — 线 = 指数涨跌（全图纵轴截在 ±${capD}%）`, left: 64, top: "80%",
               textStyle: { color: ink, fontSize: 12, fontWeight: 600, rich: { e: { color: earn, fontSize: 12 }, v: { color: val, fontSize: 12 } } } },
@@ -773,14 +777,15 @@ function option() {
           h += (x == null && state.src === "rt" ? `<br><span style="color:${ink3}">本周没有新读数（${why}），信号维持上周；`
                 + `空心柱是事后补的值 ${fmt(w[XF], 2)}（${w[FLAG] && !voided ? "下一期核实后" : "前后两期插值"}）</span>` : "")
              + `<br>${x == null ? "" : dot(x)} ${w[SPL] ? "超额修正" : "纯修正"}：<b>${fmt(x, 2)}</b>`
-             + (w[SPL] ? `<br><span style="color:${ink3}">2016-12 以前纯修正算不出（周报没写明年增速），这里是超额修正：13 周变化 − 此前 3 年均值`
+             + (w[SPL] ? `<br><span style="color:${ink3}">2016-12 以前的明年增速记录不足以计算纯修正，这里是超额修正：13 周变化 − 此前 3 年均值`
                 + (w[0] < Date.parse("2013-07-05") ? "；2013-07 以前的 3 年均值是事后补的" : "") + `</span>` : "")
              + `<br>${a == null ? "" : dot(a)} 二阶导（${state.win}周）：<b>${fmt(a, 2)}</b>`
              + (ph ? `<br>阶段：<b>${ph}</b>` : "")
              + `<br>远期EPS：${w[3]}`
+             + (w[G_NEXT] != null ? `<br><span style="color:${growth}">━</span> ${GROWTH_NAME}：<b>${fmt(w[G_NEXT])}</b>` : "")
              + (w[FLAG] && state.src === "rt" ? `<br><span style="color:${ink2}">◇ ${w[FLAG]}</span>` : "")
              + (x == null && state.src === "rt" ? "" : `<br><span style="color:${ink3}">修正读数截至 ${day(w[0])} 周报（${state.src === "rt" ? "实时口径" : "清洗口径"}）</span>`)
-             + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[state.src === "rt" ? 16 : 2], 2)} − 时间滚动 ${fmt(w[12], 2)}（按截至当周已记录的明年增速；本周 ${w[13].toFixed(1)}%，不向历史回填）</span>` : "");
+             + (w[12] != null ? `<br><span style="color:${ink3}">= 远期 EPS 13 周 ${fmt(w[EI()], 2)} − 时间滚动 ${fmt(w[12], 2)}（按截至当周已记录的明年增速）</span>` : "");
           const yd = ydAt(t);
           if (yd) h += `<br><span style="color:${ink}">●</span> Yahoo 日度纯修正（${day(yd[0]).slice(5)}，90 天）：<b>${fmt(yd[1], 2)}</b>`;
           const dc = decomp(w);
@@ -800,6 +805,8 @@ function option() {
                      formatter: v => Math.round(v).toLocaleString() },
         axisTick: { show: false, customValues: state.scale === "log" ? state.ticks : undefined } },
       pctAxis(1), pctAxis(2, cap), pctAxis(3, capD),
+      { ...pctAxis(1), position: "right", scale: true, splitLine: { show: false },
+        axisLabel: { color: growth, fontSize: 11, formatter: v => v + "%" } },
     ],
     dataZoom: [
       { type: "inside", xAxisIndex: [0, 1, 2, 3], filterMode: "filter", zoomOnMouseWheel: false },
@@ -833,6 +840,8 @@ function option() {
         markArea: SPL_END ? { silent: true, itemStyle: { color: css("--band") },
           label: { show: true, position: "insideTopLeft", color: ink3, fontSize: 11, formatter: "超额修正口径（纯修正 2016-12 起）" },
           data: [[{ xAxis: WK[0][0] }, { xAxis: SPL_END }]] } : undefined },
+      { name: GROWTH_NAME, type: "line", xAxisIndex: 1, yAxisIndex: 4, data: GROWTH, showSymbol: false, z: 4,
+        lineStyle: { color: growth, width: 1.8 }, itemStyle: { color: growth } },
       { name: "二阶导（事后值）", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: hollow("a", pos, neg) },
       { name: "二阶导", type: "bar", xAxisIndex: 2, yAxisIndex: 2, barMaxWidth: 6, barGap: "-100%", data: bars(AC(), pos, neg),
         markLine: { silent: true, symbol: "none", label: { show: false }, data: state.h > 0 ? [line(0), line(state.h, true), line(-state.h, true)] : [line(0)] } },
